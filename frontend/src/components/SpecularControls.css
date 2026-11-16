@@ -1,0 +1,61 @@
+:where(.app-shell [data-specular]) {
+  position: relative;
+}
+
+.specular-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.app-shell[data-specular-webgl="true"] :where([data-specular])::after {
+  opacity: 0;
+}
+
+:where(.app-shell [data-specular])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 1px solid rgba(126, 164, 144, .35);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: .48;
+  transition: opacity .25s ease;
+}
+
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  :where(.app-shell [data-specular])::after {
+    background: radial-gradient(80px circle at var(--specular-x, 20%) var(--specular-y, 0%),
+        rgba(255, 255, 255, .95), rgba(185, 225, 203, .45) 35%, transparent 75%);
+    -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+}
+
+:where(.app-shell [data-specular]):is(:hover, :focus-visible, :active)::after {
+  opacity: 1;
+}
+
+:where(.app-shell [data-specular]:disabled)::after {
+  opacity: .25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.app-shell [data-specular])::after {
+    transition: none;
+  }
+}
+
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  @media (prefers-reduced-motion: reduce) {
+    :where(.app-shell [data-specular])::after {
+      background: linear-gradient(135deg, rgba(255, 255, 255, .65), transparent 55%);
+    }
+  }
+}

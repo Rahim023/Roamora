@@ -1,0 +1,71 @@
+.cancel-modal-overlay {
+  position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
+  padding: 18px; overflow-y: auto; background: rgba(7, 22, 27, .7); backdrop-filter: blur(12px);
+}
+.cancel-modal {
+  --cancel-action-bg: #7a403e;
+  --cancel-action-ink: #fff8f4;
+  position: relative; width: min(100%, 470px); padding: clamp(24px, 5vw, 38px);
+  border: 1px solid rgba(255,255,255,.7); border-radius: 22px;
+  background: #fafcf8; color: #233a32; box-shadow: 0 28px 90px rgba(0,0,0,.3);
+}
+.cancel-modal-close {
+  position: absolute; top: 20px; right: 20px; display: grid; place-items: center;
+  width: 36px; height: 36px; border: 1px solid #d5e0d9; border-radius: 50%;
+  background: transparent; color: inherit; transition: background .2s, transform .2s;
+}
+.cancel-modal-close:hover:not(:disabled) { background: #e8f1ea; transform: rotate(90deg); }
+.cancel-modal-close:disabled { opacity: .45; cursor: wait; }
+.cancel-modal-icon, .cancel-modal-booking-icon { display: grid; place-items: center; flex: 0 0 auto; border-radius: 14px; }
+.cancel-modal-icon { width: 48px; height: 48px; margin-bottom: 20px; background: #f7e9e3; color: #a45b50; }
+.cancel-modal-icon.is-success { background: #e1eee6; color: #416c5c; }
+.cancel-modal-eyebrow { color: #6c8c7d; font-size: 10px; font-weight: 700; letter-spacing: .14em; }
+.cancel-modal h2 { margin: 11px 0; font: 600 clamp(23px, 4vw, 30px)/1.2 'Unbounded', sans-serif; letter-spacing: -.05em; }
+.cancel-modal > p { color: #667a70; font-size: 13px; line-height: 1.65; }
+.cancel-modal-booking { display: flex; gap: 13px; align-items: flex-start; margin: 22px 0 14px; padding: 16px; border: 1px solid #e0eae1; border-radius: 15px; background: #f0f6f0; }
+.cancel-modal-booking-icon { width: 40px; height: 40px; background: #dcece0; color: #54806c; }
+.cancel-modal-booking > div { min-width: 0; display: grid; gap: 5px; }
+.cancel-modal-booking small { color: #779588; font-size: 9px; font-weight: 700; letter-spacing: .1em; }
+.cancel-modal-booking strong { font-size: 14px; overflow-wrap: anywhere; }
+.cancel-modal-booking div > span { display: flex; align-items: center; gap: 5px; color: #71847a; font-size: 11px; overflow-wrap: anywhere; }
+.cancel-modal .cancel-modal-policy { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 20px; font-size: 11px; }
+.cancel-modal-policy svg, .cancel-modal-notice svg { flex: 0 0 auto; }
+.cancel-modal-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.cancel-modal-keep, .cancel-modal-submitting {
+  min-height: 44px; padding: 0 16px; border: 1px solid #cfddd1; border-radius: 12px;
+  background: transparent; color: #436456; font-size: 13px; font-weight: 600;
+}
+.cancel-modal-keep:hover:not(:disabled) { background: #e8f1ea; }
+.cancel-modal-keep:disabled { opacity: .5; cursor: wait; }
+.cancel-modal-submitting { display: inline-flex; align-items: center; gap: 8px; border-color: transparent; background: #7a403e; color: #fff8f4; }
+.cancel-modal .cancel-modal-footnote { margin: 13px 0 0; color: #7c8e84; font-size: 11px; }
+.cancel-modal .cancel-modal-notice, .cancel-modal .cancel-modal-error { margin: 0 0 16px; padding: 11px 12px; border-radius: 10px; font-size: 12px; }
+.cancel-modal .cancel-modal-notice { display: flex; gap: 7px; color: #3a6a4f; background: #e7f2e8; }
+.cancel-modal .cancel-modal-error { color: #9c3e3a; background: #fae9e6; }
+.cancel-modal-done { width: 100%; min-height: 46px; border-radius: 10px; }
+.dashboard-page .order-actions .cancel-link { display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; border: 1px solid #e5d2cd; border-radius: 8px; transition: background .2s, border-color .2s; }
+.dashboard-page .order-actions .cancel-link:hover { background: #fbefeb; border-color: #c99e96; }
+html[data-theme="night"] .cancel-modal { --cancel-action-bg: #8e514d; background: #14252c; border-color: #547177; color: #edf5ef; }
+html[data-theme="night"] .cancel-modal-close { border-color: #547177; }
+html[data-theme="night"] .cancel-modal-close:hover:not(:disabled) { background: #38515a; }
+html[data-theme="night"] .cancel-modal-icon { background: #493536; color: #ffbdb2; }
+html[data-theme="night"] .cancel-modal-icon.is-success, html[data-theme="night"] .cancel-modal-booking-icon { background: #2a454b; color: #d6e8e1; }
+html[data-theme="night"] .cancel-modal-eyebrow { color: #b8ddcf; }
+html[data-theme="night"] .cancel-modal > p, html[data-theme="night"] .cancel-modal-booking div > span { color: #b7c9c4; }
+html[data-theme="night"] .cancel-modal-booking { background: #1b3139; border-color: #46646c; }
+html[data-theme="night"] .cancel-modal-booking small { color: #b8ddcf; }
+html[data-theme="night"] .cancel-modal-keep { border-color: #547177; color: #d6e8e1; }
+html[data-theme="night"] .cancel-modal-keep:hover:not(:disabled) { background: #2a454b; }
+html[data-theme="night"] .cancel-modal-submitting { background: #8e514d; }
+html[data-theme="night"] .cancel-modal .cancel-modal-notice { color: #d6f1ee; background: #2c3d46; }
+html[data-theme="night"] .cancel-modal .cancel-modal-error { color: #ffd1d7; background: #482b3d; }
+html[data-theme="night"] .dashboard-page .order-actions .cancel-link { border-color: #815d5b; }
+html[data-theme="night"] .dashboard-page .order-actions .cancel-link:hover { background: #493536; }
+@media (max-width: 480px) {
+  .cancel-modal-actions > * { flex: 1 1 100%; }
+  .cancel-modal-actions .fuse-button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cancel-modal-close, .dashboard-page .order-actions .cancel-link { transition: none; }
+  .cancel-modal-close:hover:not(:disabled) { transform: none; }
+}

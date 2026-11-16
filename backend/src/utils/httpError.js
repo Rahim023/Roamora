@@ -1,0 +1,16 @@
+export class HttpError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.name = 'HttpError';
+    this.statusCode = statusCode;
+  }
+}
+
+export function validate(schema, input) {
+  const result = schema.safeParse(input);
+  if (!result.success) {
+    const message = result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+    throw new HttpError(400, message);
+  }
+  return result.data;
+}
