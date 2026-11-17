@@ -53,11 +53,8 @@ compare trips-compare 2-3 trips detail side by side
 review and ratings-user can post, delete and update review va review from hacing comment box to post as well.(all data of review must save in model)
 interactive map when open the package details it must shoedestination and itenary stops(it  must be ona each deatil page, below each day by day itenary, use react leaflet for map and cretae a component name TripMap, use map tile provider fro road images and place name, sldo grnrrstre leaflet css woth defined height for the map based on the theme, add a logic of latitude and longtiude to point the exact location on the map, same logic must bein admin panel for admin to add the packages, use openstreetmap tile url)
 email confirmation-nodemailer
-ai trip planner-use google gemini api
 
-NAME: Default Gemini API Key
-PROJECT NAME : projects/663328941921
-PROJECT NUMBER: 663328941921
+
 **BACKEND**
 The backend should be in Node.js and Express.js follwing the MVC-R(Model, View, Controller, Routes) pattern.use react router for navigation bwn trips , booking and dashboard
 Make sure the data handling in between MVR must be correct.
