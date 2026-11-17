@@ -1,0 +1,141 @@
+.travo-bubble-container {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.travo-bubble {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #47766c 0%, #315d4b 100%);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(49, 93, 75, 0.35);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: 2px solid #fff;
+}
+
+.travo-bubble:hover {
+  transform: scale(1.08) translateY(-4px);
+  box-shadow: 0 12px 32px rgba(49, 93, 75, 0.45);
+}
+
+.travo-bubble:active {
+  transform: scale(0.95);
+}
+
+.travo-bubble-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(71, 118, 108, 0.2);
+  pointer-events: none;
+}
+
+.travo-bubble-icon {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  z-index: 1;
+  filter: brightness(1.1);
+}
+
+.travo-bubble-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #dfe9e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(34, 69, 51, 0.15);
+  color: #315d4b;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: slideIn 0.3s ease;
+}
+
+.travo-bubble-tooltip svg {
+  color: #47766c;
+  flex-shrink: 0;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  right: -6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid #fff;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  box-shadow: 1px 0 0 #dfe9e1;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .travo-bubble-container {
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .travo-bubble {
+    width: 48px;
+    height: 48px;
+  }
+
+  .travo-bubble-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .travo-bubble-tooltip {
+    display: none;
+  }
+}
+
+html[data-theme="night"] .travo-bubble {
+  background: linear-gradient(135deg, #5a8f79 0%, #3f6e5c 100%);
+  box-shadow: 0 8px 24px rgba(90, 143, 121, 0.35);
+  border-color: #c6e8d9;
+}
+
+html[data-theme="night"] .travo-bubble:hover {
+  box-shadow: 0 12px 32px rgba(90, 143, 121, 0.45);
+}
+
+html[data-theme="night"] .travo-bubble-pulse {
+  background: rgba(90, 143, 121, 0.2);
+}
+
+html[data-theme="night"] .travo-bubble-tooltip {
+  background: #14252c;
+  border-color: #38515a;
+  color: #c6e8d9;
+}
+
+html[data-theme="night"] .travo-bubble-tooltip svg {
+  color: #5a8f79;
+}
+
+html[data-theme="night"] .tooltip-arrow {
+  border-left-color: #14252c;
+  box-shadow: 1px 0 0 #38515a;
+}

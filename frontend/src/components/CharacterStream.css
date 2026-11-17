@@ -1,0 +1,16 @@
+.char-stream-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  font-weight: 700;
+  color: #47766c;
+}
+
+.travo-message p {
+  margin: 0;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+html[data-theme="night"] .char-stream-cursor {
+  color: #a3d6c1;
+}

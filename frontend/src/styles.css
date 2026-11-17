@@ -62,16 +62,17 @@ img { display: block; max-width: 100%; }
 .adventure-stage { position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 420px; overflow: hidden; background: #0b1628; }
 .adventure-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .adventure-title, .adventure-reveal { font-family: 'Unbounded', sans-serif; font-weight: 800; letter-spacing: -3px; }
-.adventure-title { font-size: 105px; }
-.adventure-reveal { font-size: 62px; }
-.adventure-actions { position: absolute; top: 47%; left: 50%; width: min(90%, 500px); transform: translateX(-50%); text-align: center; }
-.adventure-actions p { display: table; margin: 0 auto 22px; padding: 6px 12px; border-radius: 20px; background: rgba(11,22,40,.7); color: #fff; font-size: clamp(13px, 1.2vw, 16px); }
-.adventure-cta { padding: 14px 22px; color: #0b1628; background: #fff; border-radius: 6px; box-shadow: 0 6px 24px rgba(11,22,40,.2); }
+.adventure-title { font-size: clamp(48px, 10vw, 105px); }
+.adventure-reveal { font-size: clamp(32px, 8vw, 62px); }
+.adventure-actions { position: absolute; top: 47%; left: 50%; width: min(90%, 500px); transform: translateX(-50%); text-align: center; z-index: 10; }
+.adventure-actions p { display: table; margin: 0 auto 22px; padding: 6px 12px; border-radius: 20px; background: rgba(11,22,40,.7); color: #fff; font-size: clamp(12px, 1.2vw, 16px); }
+.adventure-cta { padding: 12px 20px; color: #0b1628; background: #fff; border-radius: 6px; box-shadow: 0 6px 24px rgba(11,22,40,.2); font-size: clamp(12px, 1vw, 14px); }
 .adventure-cta:hover { color: #fff; background: #087f8c; }
-.adventure-scroll { position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; color: #0b1628; font-size: 10px; font-weight: 700; letter-spacing: .14em; text-shadow: 0 1px 5px #fff; }
+.adventure-scroll { position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; color: #0b1628; font-size: 10px; font-weight: 700; letter-spacing: .14em; text-shadow: 0 1px 5px #fff; z-index: 10; }
 .adventure-scroll:hover { color: #087f8c; }
 .adventure-scroll svg { transition: transform .2s ease; }
 .adventure-scroll:hover svg { transform: translateY(5px); }
+.adventure-asset-day, .adventure-asset-night { width: 100%; height: 100%; object-fit: contain; object-position: center; }
 .stop-focus { display: inline-flex; align-items: center; gap: 5px; margin: 4px 12px 0 0; padding: 3px 0; border: 0; background: transparent; color: #087f8c; font-weight: 600; }
 .hero-scene { height: min(670px, calc(100vh - 78px)); min-height: 540px; position: relative; overflow: hidden; color: white; background: #789c9a; isolation: isolate; }
 .hero-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #a9c7c7 0%, #cad3c6 44%, #e8c99e 83%, #e5b68f 100%); z-index: -5; }
@@ -290,7 +291,80 @@ img { display: block; max-width: 100%; }
 .order-main { flex: 1; }
 .order-main h3 { font: 400 20px var(--serif); margin: 7px 0 6px; }
 .order-main p { color: #78827c; display: flex; align-items: center; gap: 7px; margin: 0; font-size: 10px; }
-.status-pill { display: inline-block; text-transform: capitalize; padding: 5px 8px; border-radius: 20px; color: #55725f; background: #edf4ee; font-size: 9px; }
+.status-pill { display: inline-block; text-transform: capitalize; padding: 6px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; border: 1px solid transparent; transition: all .2s ease; }
+
+/* Status colors - Admin panel optimized */
+.status-pill.status-confirmed,
+.status-pill.status-active { 
+  color: #1f5b35; 
+  background: #d4f4d8; 
+  border-color: #a8d9b1;
+  box-shadow: 0 2px 8px rgba(31, 91, 53, .12);
+}
+
+.status-pill.status-completed { 
+  color: #1f5b35; 
+  background: #d4f4d8; 
+  border-color: #a8d9b1;
+  box-shadow: 0 2px 8px rgba(31, 91, 53, .12);
+}
+
+.status-pill.status-pending { 
+  color: #7c5620; 
+  background: #fde8d8; 
+  border-color: #f5c896;
+  box-shadow: 0 2px 8px rgba(124, 86, 32, .12);
+}
+
+.status-pill.status-scheduled {
+  color: #7c5620;
+  background: #fde8d8;
+  border-color: #f5c896;
+  box-shadow: 0 2px 8px rgba(124, 86, 32, .12);
+}
+
+.status-pill.status-cancelled { 
+  color: #8b2e1f; 
+  background: #ffd8d8; 
+  border-color: #f4b0a0;
+  box-shadow: 0 2px 8px rgba(139, 46, 31, .12);
+}
+
+.status-pill.status-failed { 
+  color: #8b2e1f; 
+  background: #ffd8d8; 
+  border-color: #f4b0a0;
+  box-shadow: 0 2px 8px rgba(139, 46, 31, .12);
+}
+
+.status-pill.status-archived { 
+  color: #666; 
+  background: #e8e8e8; 
+  border-color: #d0d0d0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+}
+
+.status-pill.status-processing { 
+  color: #2f5f8f; 
+  background: #d4e8f8; 
+  border-color: #a8d0f0;
+  box-shadow: 0 2px 8px rgba(47, 95, 143, .12);
+}
+
+.admin-recent-row .status-pill {
+  padding: 7px 12px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-table .status-pill {
+  padding: 7px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .order-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .order-actions strong { font-size: 13px; }
 .order-actions .text-link, .cancel-link { font-size: 10px; }
@@ -965,7 +1039,36 @@ html[data-theme="night"] .circular-carousel__card-label { background: #1b3139; b
 html[data-theme="night"] :is(.journey-carousel-controls button, .gallery-pagination button, .destination-guide-picker button, .explore-page .compare-toggle, .icon-button, .counter button) { background: #223b42; color: #edf5ef; border-color: #547177; }
 html[data-theme="night"] :is(.journey-carousel-controls button, .gallery-pagination button, .destination-guide-picker button):hover,
 html[data-theme="night"] .destination-guide-picker button[aria-pressed="true"] { background: #83b5aa; color: #0b151c; }
-html[data-theme="night"] :is(.journey-spotlight-top span:last-child, .status-pill, .avatar, .dashboard-avatar, .empty-icon, .finder-compass, .form-section-heading > span, .confirmation-icon, .admin-badge) { color: #edf5ef; background: #2a454b; border-color: #547177; }
+html[data-theme="night"] :is(.journey-spotlight-top span:last-child, .avatar, .dashboard-avatar, .empty-icon, .finder-compass, .form-section-heading > span, .confirmation-icon, .admin-badge) { color: #edf5ef; background: #2a454b; border-color: #547177; }
+html[data-theme="night"] .status-pill.status-confirmed,
+html[data-theme="night"] .status-pill.status-active,
+html[data-theme="night"] .status-pill.status-completed { 
+  color: #a3d6c1; 
+  background: #1b4d35; 
+  border-color: #2d7a5c;
+}
+html[data-theme="night"] .status-pill.status-pending,
+html[data-theme="night"] .status-pill.status-scheduled { 
+  color: #f5d8a0; 
+  background: #4d3c1f; 
+  border-color: #7a5c35;
+}
+html[data-theme="night"] .status-pill.status-cancelled,
+html[data-theme="night"] .status-pill.status-failed { 
+  color: #f5b0a0; 
+  background: #5c2a1f; 
+  border-color: #8b4a35;
+}
+html[data-theme="night"] .status-pill.status-archived { 
+  color: #c0c0c0; 
+  background: #3a3a3a; 
+  border-color: #555555;
+}
+html[data-theme="night"] .status-pill.status-processing { 
+  color: #a8d0f0; 
+  background: #2f4a6b; 
+  border-color: #5a7a9f;
+}
 html[data-theme="night"] :is(.trip-title, .journey-spotlight h3, .journey-facts strong, .journey-price strong, .destination-guides-heading h2, .destination-guide-content h3, .destination-guide-ideas li, .destination-guide-tip strong, .journey-summary, .journey-more summary) { color: #edf5ef; }
 html[data-theme="night"] :is(.journey-spotlight-top, .journey-facts > div, .journey-carousel-topline, .destination-guide-kicker, .destination-guide-ideas li svg, .gallery-price, .trip-price, .text-link, .auth-switch a) { color: #b8ddcf; }
 html[data-theme="night"] :is(.journey-included > span, .journey-facts small, .journey-price small, .destination-guide-ideas > span, .explore-section-note, .sort-control select, .sort-control, .booking-price small, .order-summary > span, .order-summary > small, .order-main p, .metric-card > span, .metric-card > small, .studio-heading p) { color: #b7c9c4; }

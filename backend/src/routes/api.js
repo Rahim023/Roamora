@@ -486,9 +486,12 @@ router.post('/travo', handle(async (request, response) => {
     });
   } catch (error) {
     if (error.status === 429) throw new HttpError(429, 'Travo is busy. Please try again shortly.');
-    if (error.status === 401 || error.status === 403) throw new HttpError(503, 'Travo credentials are unavailable.');
+    if (error.status === 401 || error.status === 403) {
+      console.log('⚠️ TRAVO AUTH ERROR:', JSON.stringify({ status: error.status, message: error.message }));
+      throw new HttpError(503, 'Travo credentials are unavailable.');
+    }
     if (error.name === 'AbortError' || error.status === 408) throw new HttpError(504, 'Travo timed out. Please try again.');
-    console.error('Travo provider request failed.', { errorType: error.name, status: error.status });
+    console.log('⚠️ TRAVO ERROR:', JSON.stringify({ errorType: error.name, status: error.status, message: error.message }));
     throw new HttpError(502, 'Travo could not respond right now. Please try again.');
   }
   if (!result.text?.trim()) throw new HttpError(502, 'Travo returned an empty response. Please try again.');

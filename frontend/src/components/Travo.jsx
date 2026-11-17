@@ -5,7 +5,9 @@ import { ArrowRight, ArrowUpRight, Compass, MapPin, Sparkles, Wallet } from 'luc
 import { endpoints, errorMessage } from '../api.js';
 import PromptBar from './PromptBar.jsx';
 import ThoughtLine from './ThoughtLine.jsx';
+import CharacterStream from './CharacterStream.jsx';
 import travoLogo from './travo-logo.png';
+import './CharacterStream.css';
 
 const starters = [
   { icon: Wallet, label: 'Plan around my budget', prompt: 'Can you help me find a trip within my budget?' },
@@ -26,6 +28,7 @@ export default function Travo() {
   const [pending, setPending] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
   const [error, setError] = useState('');
+  const [streamingIndex, setStreamingIndex] = useState(null);
   const controller = useRef(null);
   const conversation = useRef(null);
   const promptInput = useRef(null);
@@ -95,7 +98,7 @@ export default function Travo() {
           {message.role === 'model' && <img className="travo-avatar" src={travoLogo} alt=""/>}
           <div className={`travo-message ${message.role === 'user' ? 'travo-user' : 'travo-assistant'}`}><strong>{message.role === 'user' ? 'YOU' : 'TRAVO'}</strong>
             {message.role === 'model' && <ThoughtLine elapsed={message.elapsed}/>}
-            <p><MessageText text={message.text}/></p></div></div>)}
+            <p>{message.role === 'model' && index === messages.length - 1 && !pending ? <CharacterStream text={message.text} duration={message.text.length * 0.02} onComplete={() => setStreamingIndex(null)}/> : <MessageText text={message.text}/>}</p></div></div>)}
         {pending && <div className="travo-message-row"><img className="travo-avatar" src={travoLogo} alt=""/><div className="travo-message travo-assistant"><ThoughtLine startedAt={startedAt}/></div></div>}
       </div>
       {!messages.length && <div className="travo-starters" aria-label="Conversation starters"><span>NEED A LITTLE INSPIRATION?</span><div>{starters.map(({ icon: Icon, label, prompt }) => <button key={label} type="button" disabled={pending} onClick={() => { setDraft(prompt); setError(''); promptInput.current?.focus(); }}><Icon size={15}/><span>{label}</span><ArrowRight size={14}/></button>)}</div></div>}

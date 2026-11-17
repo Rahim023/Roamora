@@ -31,6 +31,8 @@ import { adminBookingReference, adminPersonName } from './adminDisplay.js';
 import roamoraLogo from './components/roamora-logo.png';
 import ExploreGlobe from './components/ExploreGlobe.jsx';
 import Travo from './components/Travo.jsx';
+import TravoBubble from './components/TravoBubble.jsx';
+import './components/TravoBubble.css';
 import ClickSpark from './components/ClickSpark.jsx';
 import CircularCarousel from './components/CircularCarousel.jsx';
 import DestinationGuides from './components/DestinationGuides.jsx';
@@ -351,7 +353,7 @@ function Explore() {
       <div className="explore-hero-caption" aria-hidden="true"><span>GO A LITTLE FURTHER</span><span>✦</span><span>COME BACK CHANGED</span></div>
     </section>
     <section id="explore-results" aria-label="Explore journeys" className="explore-results">
-    <div className="explore-section-heading"><div><span className="eyebrow">YOUR NEXT CHAPTER</span><h2>Find your way out there.</h2></div><span className="explore-section-note">Curated journeys, made for you.</span></div>
+    <div className="explore-section-heading"><div><span className="eyebrow">YOUR NEXT CHAPTER</span><h2>Explore with <em>Travo</em></h2></div><span className="explore-section-note">AI-powered journey discovery, made for you.</span></div>
     <div className="explore-toolbar">
       <form className="explore-search" onSubmit={(e) => { e.preventDefault(); setSearch(Object.fromEntries(Object.entries({ ...form, q: query }).filter(([, value]) => value !== ''))); setPage(1); }}>
         <Search size={18}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search a place, a feeling, a trip…" aria-label="Search trips"/>
@@ -1194,23 +1196,23 @@ function Admin() {
     <nav className="admin-tabs" aria-label="Admin sections"><div className="admin-nav-label">YOUR WORKSPACE <span>01 — 06</span></div>{tabs.map(({ key, label, icon: Icon, description }) => <button type="button" disabled={saving} aria-pressed={tab === key} className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setShowForm(false); }}><span className="admin-nav-icon"><Icon size={17}/></span><span className="admin-nav-copy"><strong>{label}</strong><small>{description}</small></span><ArrowRight className="admin-nav-arrow" size={15}/></button>)}<div className="admin-nav-foot"><ShieldCheck size={15}/> Authorized access only</div></nav>
     <motion.div key={tab} className="admin-workspace-content" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
     {error && <Alert>{error}</Alert>}
-    {loading ? <Loading/> : tab === 'overview' ? analytics && <div className="admin-overview"><div className="admin-section-intro"><div><div className="eyebrow">YOUR BUSINESS AT A GLANCE</div><h2>The overview.</h2><p>Bookings, journeys and travellers at a glance.</p></div><span className="admin-section-mark"><Sparkles size={18}/></span></div><div className="metric-grid">{[['Confirmed & completed', analytics?.metrics?.confirmedBookings ?? '—', 'Confirmed or completed bookings', Ticket], ['Active journeys', analytics?.metrics?.activePackages ?? '—', 'Currently active journeys', Package], ['Travellers', analytics?.metrics?.customers ?? '—', 'Customer accounts', Users]].map(([label, value, detail, Icon]) => <div key={label} className="metric-card"><div className="admin-metric-top"><span>{label}</span><span className="admin-metric-icon"><Icon size={17}/></span></div><strong>{value}</strong><small>{detail}</small></div>)}</div>
+    {loading ? <Loading/> : tab === 'overview' ? analytics && <div className="admin-overview"><div className="admin-section-intro"><div><div className="eyebrow">YOUR BUSINESS AT A GLANCE</div><h2>The overview.</h2><p>Bookings, journeys and travellers at a glance.</p></div><span className="admin-section-mark"><Sparkles size={18}/></span></div><div className="metric-grid">{[['Confirmed & completed', analytics?.metrics?.confirmedBookings ?? '—', 'Confirmed or completed bookings', Ticket], ['Active journeys', analytics?.metrics?.activePackages ?? '—', 'Currently active journeys', Package], ['Travellers', analytics?.metrics?.customers ?? '—', 'Customer accounts', Users], ['Revenue', analytics?.metrics?.netExternalPayments && analytics.metrics.netExternalPayments.length ? money(analytics.metrics.netExternalPayments.reduce((sum, { netMinor }) => sum + (netMinor ?? 0), 0) / 100, analytics.metrics.netExternalPayments[0]?.currency || 'CAD') : '—', 'Net external payments', Ticket]].map(([label, value, detail, Icon]) => <div key={label} className="metric-card"><div className="admin-metric-top"><span>{label}</span><span className="admin-metric-icon"><Icon size={17}/></span></div><strong>{value}</strong><small>{detail}</small></div>)}</div>
       <div className="admin-chart-grid">
         <AdminBarChart title="Bookings by destination" description="Top destinations for confirmed and completed bookings, all time." data={destinationData} valueLabel="Bookings" emptyMessage="Confirmed and completed bookings will appear here."/>
         <AdminBarChart title="Customers by country" description="Top countries for customer accounts, all time. Missing countries are included." data={customerData} valueLabel="Customers" emptyMessage="Customer accounts will appear here."/>
       </div>
       <div className="chart-card admin-payments"><div><div className="eyebrow">PAYMENT OVERVIEW</div><h2>Recorded external payments</h2><p>Totals reflect recorded external payments, less recorded refunds, and are not independently verified with a payment provider.</p></div>{analytics?.metrics?.netExternalPayments?.length ? <div className="admin-payment-totals">{analytics.metrics.netExternalPayments.map(({ currency, netMinor }) => <div key={currency}><span>{currency}</span><strong>{money(netMinor / 100, currency)}</strong></div>)}</div> : <div className="chart-empty"><ShieldCheck size={21}/><strong>No external payments recorded yet</strong><span>Only recorded external payments are included in these totals.</span></div>}</div>
       {Object.keys(revenueByCurrency).length ? <div className="admin-chart-grid">{Object.entries(revenueByCurrency).map(([currency, data]) => <AdminBarChart key={currency} title={`Net payments · ${currency}`} description="Recorded external payments less recorded refunds by month, this year through today." data={data} valueLabel="Net payments" formatValue={(value) => money(value, currency)}/>)}</div> : <AdminBarChart title="Net payments by month" description="Recorded external payments less recorded refunds, this year through today. Currencies are shown separately." data={[]} valueLabel="Net payments" emptyMessage="No external payment activity recorded for this year."/>}
-      <div className="admin-recent"><div className="admin-recent-heading"><div><div className="eyebrow">LATEST ACTIVITY</div><h2>Recent bookings.</h2><p>Most recent booking records.</p></div><button type="button" onClick={() => setTab('orders')}>View all <ArrowRight size={15}/></button></div>{analytics?.recentOrders?.length ? <div className="admin-recent-list">{analytics.recentOrders.map((order) => <Link key={itemId(order)} to={`/admin/orders/${itemId(order)}`} className="admin-recent-row"><span className="admin-recent-icon"><Ticket size={17}/></span><span className="admin-recent-name"><strong>{order.packageSnapshot?.title || 'Journey'}</strong><small>{adminBookingReference(order)} · {adminPersonName(order, order.contact?.name) || 'Traveller'}</small></span><span className="status-pill">{order.status || 'Pending'}</span><ArrowRight size={15}/></Link>)}</div> : <div className="admin-recent-empty">New bookings will appear here.</div>}</div></div>
+      <div className="admin-recent"><div className="admin-recent-heading"><div><div className="eyebrow">LATEST ACTIVITY</div><h2>Recent bookings.</h2><p>Most recent booking records.</p></div><button type="button" onClick={() => setTab('orders')}>View all <ArrowRight size={15}/></button></div>{analytics?.recentOrders?.length ? <div className="admin-recent-list">{analytics.recentOrders.map((order) => <Link key={itemId(order)} to={`/admin/orders/${itemId(order)}`} className="admin-recent-row"><span className="admin-recent-icon"><Ticket size={17}/></span><span className="admin-recent-name"><strong>{order.packageSnapshot?.title || 'Journey'}</strong><small>{adminBookingReference(order)} · {adminPersonName(order, order.contact?.name) || 'Traveller'}</small></span><span className={`status-pill status-${(order.status || 'pending').toLowerCase()}`}>{order.status || 'Pending'}</span><ArrowRight size={15}/></Link>)}</div> : <div className="admin-recent-empty">New bookings will appear here.</div>}</div></div>
       : <section className="admin-list-section"><div className="admin-list-heading"><div><div className="eyebrow">YOUR WORKSPACE / {activeSection.label.toUpperCase()}</div><h2>{activeSection.label}.</h2><p>{activeSection.description}. <span>{rows.length} {rows.length === 1 ? 'record' : 'records'} shown</span></p></div>{tab === 'packages' && <button className="button button-dark" disabled={saving} onClick={() => { setEditing(null); setOriginalPackage(null); setImageFile(null); setUploadedImage(''); setForm({ title: '', slug: '', country: '', destination: '', description: '', price: '', durationDays: '', nights: '', travelType: '', currency: 'CAD', freeCancellationDaysBefore: 0, refundPercent: 0 }); setShowForm(!showForm); }}><Plus size={15}/> Add journey</button>}</div>
         {tab === 'departures' && <div className="admin-departure-create"><DepartureCreate onCreated={() => { notify('Departure created.'); load(); }}/></div>}
         {showForm && <form className="admin-edit-form" onSubmit={submitPackage}><h3>{editing ? 'Edit journey' : 'New journey'}</h3><div className="form-grid">{[['title','Title'],['slug','Slug (lowercase, hyphenated)'],['destination','Destination'],['country','Country'],['travelType','Travel style'],['currency','Currency']].map(([key,label]) => <label key={key}>{label}<input required value={form[key] ?? ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}/></label>)}{[['price','Price per person','0','0.01'],['durationDays','Duration (days)','1','1'],['nights','Nights','0','1'],['freeCancellationDaysBefore','Free cancellation days before','0','1'],['refundPercent','Refund percent','0','1']].map(([key,label,min,step]) => <label key={key}>{label}<input required type="number" min={min} max={key === 'refundPercent' ? 100 : undefined} step={step} value={form[key] ?? ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}/></label>)}<label className="span-two">Description<textarea required rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}/></label><label className="span-two">Journey image <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { setImageFile(e.target.files?.[0] || null); setUploadedImage(''); }}/><small>JPEG, PNG or WebP, up to 5 MB. Uploaded when you save.</small>{uploadedImage && <small>Image uploaded and ready to save.</small>}</label></div><div className="form-actions"><button type="button" className="button button-outline" disabled={saving} onClick={() => setShowForm(false)}>Cancel</button><button className="button button-dark" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Create journey'}</button></div></form>}
-        {!rows.length ? !error && <EmptyState title={`No ${activeSection.label.toLowerCase()} yet.`} copy="When records are available, they’ll show up here."/> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr>{(tab === 'packages' ? ['Journey', 'Destination', 'Price', 'Duration', 'Actions'] : tab === 'departures' ? ['Departure', 'Journey', 'Date', 'Seats', 'Actions'] : tab === 'orders' ? ['Order', 'Traveller', 'Status', 'Booking value', 'Actions'] : tab === 'users' ? ['Name', 'Email', 'Role', 'Joined', 'Actions'] : ['Review', 'Traveller', 'Rating', 'Actions']).map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{rows.map((row) => {
+        {!rows.length ? !error && <EmptyState title={`No ${activeSection.label.toLowerCase()} yet.`} copy="When records are available, they'll show up here."/> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr>{(tab === 'packages' ? ['Journey', 'Destination', 'Price', 'Duration', 'Actions'] : tab === 'departures' ? ['Departure', 'Journey', 'Date', 'Seats', 'Actions'] : tab === 'orders' ? ['Order', 'Traveller', 'Status', 'Booking value', 'Actions'] : tab === 'users' ? ['Name', 'Email', 'Role', 'Joined'] : ['Review', 'Traveller', 'Rating', 'Actions']).map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{rows.map((row) => {
           const id = itemId(row);
           if (tab === 'packages') return <tr key={id}><td data-label="Journey"><div className="admin-journey-cell"><img src={packageImage(row)} alt=""/><span><strong>{packageTitle(row)}</strong><small className="admin-cell-detail">{row.travelType || 'Journey'} · {row.status || 'active'}</small></span></div></td><td data-label="Destination">{tripPlace(row)}</td><td data-label="Price">{money(tripPrice(row), row.currency || 'USD')}</td><td data-label="Duration">{row.durationDays || row.days || '—'} days</td><td data-label="Actions"><div className="table-actions"><button disabled={saving} onClick={() => { setEditing(id); setOriginalPackage(row); setImageFile(null); setUploadedImage(''); setForm({ title: row.title, slug: row.slug, destination: row.destination, country: row.country, description: row.description, price: tripPrice(row), durationDays: row.durationDays, nights: row.nights, travelType: row.travelType, currency: row.currency, freeCancellationDaysBefore: row.cancellationPolicy?.freeCancellationDaysBefore ?? 0, refundPercent: row.cancellationPolicy?.refundPercent ?? 0 }); setShowForm(true); }}>Edit</button><button disabled={saving} onClick={() => setConfirmation({ title: 'Archive this journey?', description: 'It will no longer appear in public listings.', confirmLabel: 'Archive journey', action: () => deletePackage(id) })}>Archive</button></div></td></tr>;
-          if (tab === 'departures') return <tr key={id}><td data-label="Departure"><strong>{String(id).slice(-8).toUpperCase()}</strong><small className="admin-cell-detail">{row.status || 'Scheduled'}</small></td><td data-label="Journey">{packageTitle(row.package || row)}</td><td data-label="Date">{row.startDate ? new Date(row.startDate).toLocaleDateString() : '—'}</td><td data-label="Seats">{row.availableSeats ?? '—'}{row.capacity != null && <small className="admin-cell-detail">of {row.capacity} available</small>}</td><td data-label="Actions"><DepartureActions row={row} onChanged={() => { notify('Departure updated.'); load(); }} onError={setError}/></td></tr>;
-          if (tab === 'orders') return <tr key={id}><td data-label="Order"><strong>{adminBookingReference(row)}</strong><small className="admin-cell-detail">{row.packageSnapshot?.title || 'Journey'}</small></td><td data-label="Traveller">{adminPersonName(row, row.contact?.name) || adminPersonName(row.user, row.user?.name) || '—'}</td><td data-label="Status"><span className="status-pill">{row.status || 'Pending'}</span>{row.status === 'completed' && <small className="admin-cell-detail">Review email: {row.reviewEmailStatus === 'sent' ? 'sent' : row.reviewEmailStatus === 'not_needed' ? 'already reviewed' : row.reviewEmailStatus === 'pending' ? 'sending or awaiting retry' : row.reviewEmailStatus === 'failed' ? 'failed' : row.reviewEmailStatus === 'not_configured' ? 'SMTP not configured' : 'not recorded'}</small>}</td><td data-label="Booking value">{money(row.totalMinor == null ? null : row.totalMinor / 100, row.currency || 'CAD')}<small className="admin-cell-detail">{row.paymentMode === 'demo' ? 'No payment collected' : 'Booking value'}</small></td><td data-label="Actions"><div className="admin-row-actions"><Link to={`/admin/orders/${id}`}>View details</Link>{row.status === 'confirmed' && <button onClick={() => setConfirmation({ title: 'Complete this booking?', description: 'The booking will be marked completed and a review request will be sent to its contact email unless the journey was already reviewed.', confirmLabel: 'Mark completed', action: () => completeOrder(id) })}>Mark completed</button>}{row.status === 'completed' && !['sent', 'not_needed'].includes(row.reviewEmailStatus) && <button disabled={Boolean(reviewEmailBusy)} onClick={() => retryReviewEmail(id)}>{reviewEmailBusy === id ? 'Sending…' : 'Retry review email'}</button>}</div></td></tr>;
-          if (tab === 'users') return <tr key={id}><td data-label="Name"><div className="admin-person"><span className="admin-person-avatar">{(adminPersonName(row, row.name) || 'T').charAt(0).toUpperCase()}</span><strong>{adminPersonName(row, row.name) || '—'}</strong></div></td><td data-label="Email">{row.email || '—'}</td><td data-label="Role"><span className="status-pill">{row.role || 'user'}</span></td><td data-label="Joined">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td><td data-label="Actions">{row.role === 'user' && row.isActive !== false ? <button className="table-action" onClick={() => setConfirmation({ title: 'Grant administrator access?', description: `${adminPersonName(row, row.name) || row.email} will be able to manage journeys, bookings and other users.`, confirmLabel: 'Grant access', action: () => promoteUser(id) })}>Make admin</button> : '—'}</td></tr>;
+          if (tab === 'departures') return <tr key={id}><td data-label="Departure"><strong>{String(id).slice(-8).toUpperCase()}</strong><small className={`admin-cell-detail status-${(row.status || 'scheduled').toLowerCase()}`}>{row.status || 'Scheduled'}</small></td><td data-label="Journey">{packageTitle(row.package || row)}</td><td data-label="Date">{row.startDate ? new Date(row.startDate).toLocaleDateString() : '—'}</td><td data-label="Seats">{row.availableSeats ?? '—'}{row.capacity != null && <small className="admin-cell-detail">of {row.capacity} available</small>}</td><td data-label="Actions"><DepartureActions row={row} onChanged={() => { notify('Departure updated.'); load(); }} onError={setError}/></td></tr>;
+          if (tab === 'orders') return <tr key={id}><td data-label="Order"><strong>{adminBookingReference(row)}</strong><small className="admin-cell-detail">{row.packageSnapshot?.title || 'Journey'}</small></td><td data-label="Traveller">{adminPersonName(row, row.contact?.name) || adminPersonName(row.user, row.user?.name) || '—'}</td><td data-label="Status"><span className={`status-pill status-${(row.status || 'pending').toLowerCase()}`}>{row.status || 'Pending'}</span>{row.status === 'completed' && <small className="admin-cell-detail">Review email: {row.reviewEmailStatus === 'sent' ? 'sent' : row.reviewEmailStatus === 'not_needed' ? 'already reviewed' : row.reviewEmailStatus === 'pending' ? 'sending or awaiting retry' : row.reviewEmailStatus === 'failed' ? 'failed' : row.reviewEmailStatus === 'not_configured' ? 'SMTP not configured' : 'not recorded'}</small>}</td><td data-label="Booking value">{money(row.totalMinor == null ? null : row.totalMinor / 100, row.currency || 'CAD')}<small className="admin-cell-detail">{row.paymentMode === 'demo' ? 'No payment collected' : 'Booking value'}</small></td><td data-label="Actions"><div className="admin-row-actions"><Link to={`/admin/orders/${id}`}>View details</Link>{row.status === 'confirmed' && <button onClick={() => setConfirmation({ title: 'Complete this booking?', description: 'The booking will be marked completed and a review request will be sent to its contact email unless the journey was already reviewed.', confirmLabel: 'Mark completed', action: () => completeOrder(id) })}>Mark completed</button>}{row.status === 'completed' && !['sent', 'not_needed'].includes(row.reviewEmailStatus) && <button disabled={Boolean(reviewEmailBusy)} onClick={() => retryReviewEmail(id)}>{reviewEmailBusy === id ? 'Sending…' : 'Retry review email'}</button>}</div></td></tr>;
+          if (tab === 'users') return <tr key={id}><td data-label="Name"><div className="admin-person"><span className="admin-person-avatar">{(adminPersonName(row, row.name) || 'T').charAt(0).toUpperCase()}</span><strong>{adminPersonName(row, row.name) || '—'}</strong></div></td><td data-label="Email">{row.email || '—'}</td><td data-label="Role"><select disabled={saving} value={row.role || 'user'} onChange={(e) => { if (e.target.value !== row.role) setConfirmation({ title: `Change role to ${e.target.value}?`, description: `${adminPersonName(row, row.name) || row.email} will receive updated access permissions.`, confirmLabel: `Change to ${e.target.value}`, action: () => promoteUser(id, e.target.value) }); }} className="admin-role-dropdown"><option value="user">user</option><option value="admin" disabled={row.isActive === false}>admin</option></select></td><td data-label="Joined">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td></tr>;
           return <tr key={id}><td data-label="Review"><strong>{row.comment || row.text || '—'}</strong><small className="admin-cell-detail">{row.package?.title || 'Journey'}</small></td><td data-label="Traveller">{adminPersonName(row.user, row.user?.name) || row.name || '—'}</td><td data-label="Rating"><span className="rating"><Star size={13} fill="currentColor"/>{row.rating || '—'}</span></td><td data-label="Actions"><button className="table-action" onClick={() => setConfirmation({ title: 'Delete this review?', description: 'This will remove the review.', confirmLabel: 'Delete review', action: () => deleteReview(id) })}>Delete</button></td></tr>;
         })}</tbody></table></div>}
       </section>}
@@ -1225,13 +1227,80 @@ function DepartureCreate({ onCreated }) {
   const [packages, setPackages] = useState([]);
   const [form, setForm] = useState({ package: '', startDate: '', endDate: '', capacity: 10, price: '', currency: 'CAD' });
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const durationDays = form.startDate && form.endDate ? Math.max(0, Math.ceil((new Date(form.endDate) - new Date(form.startDate)) / (1000 * 60 * 60 * 24))) : 0;
+  const totalRevenue = Number(form.capacity) * Number(form.price) || 0;
   useEffect(() => { if (open) endpoints.adminPackages().then(({ data }) => setPackages(records(data))).catch((e) => setError(errorMessage(e))); }, [open]);
   const submit = async (e) => {
     e.preventDefault();
-    try { await endpoints.createDeparture({ package: form.package, startDate: form.startDate, endDate: form.endDate, capacity: Number(form.capacity), pricePerPersonMinor: Math.round(Number(form.price) * 100), currency: form.currency }); setOpen(false); onCreated(); }
+    if (saving) return;
+    setSaving(true);
+    try { 
+      await endpoints.createDeparture({ package: form.package, startDate: form.startDate, endDate: form.endDate, capacity: Number(form.capacity), pricePerPersonMinor: Math.round(Number(form.price) * 100), currency: form.currency }); 
+      setOpen(false); 
+      setForm({ package: '', startDate: '', endDate: '', capacity: 10, price: '', currency: 'CAD' });
+      onCreated(); 
+    }
     catch (e2) { setError(errorMessage(e2)); }
+    finally { setSaving(false); }
   };
-  return <><button className="button button-dark" onClick={() => setOpen((x) => !x)}><Plus size={15}/> Add departure</button>{open && <form className="admin-edit-form departure-form" onSubmit={submit}><label>Journey<AnimatedSelect required value={form.package} onChange={(e) => { const selectedPackage = packages.find((p) => String(itemId(p)) === e.target.value); setForm({ ...form, package: e.target.value, currency: selectedPackage?.currency || 'CAD', price: selectedPackage ? tripPrice(selectedPackage) : '' }); }}><option value="">Choose journey</option>{packages.filter((p) => p.status === 'active').map((p) => <option key={itemId(p)} value={itemId(p)}>{packageTitle(p)}</option>)}</AnimatedSelect></label><label>Start date<input type="date" required value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })}/></label><label>End date<input type="date" required value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })}/></label><label>Capacity<input type="number" min="0" required value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })}/></label><label>Price per person ({form.currency})<input type="number" min="0" step="0.01" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })}/></label><Alert>{error}</Alert><button className="button button-dark">Save departure</button></form>}</>;
+  return <><button className="button button-dark" disabled={saving} onClick={() => setOpen((x) => !x)}><Plus size={15}/> Add departure</button>{open && <form className="admin-edit-form departure-form-create" onSubmit={submit}>
+    <div className="departure-form-header">
+      <h3>Create New Departure</h3>
+      <p>Add a new departure date, capacity, and pricing for a journey</p>
+    </div>
+    <div className="departure-form-grid">
+      <div className="departure-form-field departure-form-field-full">
+        <span className="field-label">Journey</span>
+        <AnimatedSelect 
+          required 
+          value={form.package} 
+          onChange={(e) => { 
+            const selectedPackage = packages.find((p) => String(itemId(p)) === e.target.value); 
+            setForm({ ...form, package: e.target.value, currency: selectedPackage?.currency || 'CAD', price: selectedPackage ? tripPrice(selectedPackage) : '' }); 
+          }}
+        >
+          <option value="">Choose journey</option>
+          {packages.filter((p) => p.status === 'active').map((p) => <option key={itemId(p)} value={itemId(p)}>{packageTitle(p)}</option>)}
+        </AnimatedSelect>
+      </div>
+      <div className="departure-form-field">
+        <span className="field-label">Start Date</span>
+        <input type="date" required value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })}/>
+      </div>
+      <div className="departure-form-field">
+        <span className="field-label">End Date</span>
+        <input type="date" required value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })}/>
+      </div>
+      <div className="departure-form-field">
+        <span className="field-label">Capacity</span>
+        <input type="number" required min="0" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })}/>
+      </div>
+      <div className="departure-form-field">
+        <span className="field-label">Price per Person ({form.currency})</span>
+        <input type="number" required min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })}/>
+      </div>
+    </div>
+    {form.package && form.startDate && form.endDate && form.price && <div className="departure-form-summary">
+      <div className="summary-item">
+        <span className="summary-label">Duration</span>
+        <span className="summary-value">{durationDays} days</span>
+      </div>
+      <div className="summary-item">
+        <span className="summary-label">Capacity</span>
+        <span className="summary-value">{form.capacity} seats</span>
+      </div>
+      <div className="summary-item summary-item-highlight">
+        <span className="summary-label">Total Revenue (est.)</span>
+        <span className="summary-value">{money(totalRevenue, form.currency)}</span>
+      </div>
+    </div>}
+    {error && <Alert>{error}</Alert>}
+    <div className="departure-form-actions">
+      <button className="button button-outline" type="button" onClick={() => setOpen(false)} disabled={saving}>Cancel</button>
+      <button className="button button-dark" type="submit" disabled={saving}>{saving ? 'Creating...' : 'Create Departure'}</button>
+    </div>
+  </form>}</>;
 }
 
 function DepartureActions({ row, onChanged, onError }) {
@@ -1240,11 +1309,62 @@ function DepartureActions({ row, onChanged, onError }) {
   const [endDate, setEndDate] = useState((row.endDate || '').slice(0, 10));
   const [capacity, setCapacity] = useState(row.capacity);
   const [price, setPrice] = useState(row.pricePerPersonMinor / 100);
+  const [saving, setSaving] = useState(false);
+  const durationDays = date && endDate ? Math.max(0, Math.ceil((new Date(endDate) - new Date(date)) / (1000 * 60 * 60 * 24))) : 0;
   const save = async () => {
-    try { await endpoints.updateDeparture(itemId(row), { startDate: date, endDate, capacity: Number(capacity), pricePerPersonMinor: Math.round(Number(price) * 100) }); setEditing(false); onChanged(); }
+    if (saving) return;
+    setSaving(true);
+    try { 
+      await endpoints.updateDeparture(itemId(row), { startDate: date, endDate, capacity: Number(capacity), pricePerPersonMinor: Math.round(Number(price) * 100) }); 
+      setEditing(false); 
+      onChanged(); 
+    }
     catch (e) { onError(errorMessage(e)); }
+    finally { setSaving(false); }
   };
-  return editing ? <span className="departure-edit"><label>Start<input type="date" value={date} onChange={(e) => setDate(e.target.value)}/></label><label>End<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}/></label><label>Capacity<input type="number" min="0" value={capacity} onChange={(e) => setCapacity(e.target.value)}/></label><label>Price ({row.currency})<input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)}/></label><button onClick={save}>Save</button><button onClick={() => setEditing(false)}>Cancel</button></span> : <span className="table-actions"><button onClick={() => setEditing(true)}>Edit</button></span>;
+  if (!editing) {
+    return <span className="table-actions"><button onClick={() => setEditing(true)}>Edit</button></span>;
+  }
+  return <div className="departure-edit-modal">
+    <div className="departure-edit-header">
+      <h3>Edit Departure Details</h3>
+      <p>Update dates, capacity, and pricing for this departure</p>
+    </div>
+    <div className="departure-edit-content">
+      <div className="departure-edit-grid">
+        <div className="departure-edit-field">
+          <span className="field-label">Start Date</span>
+          <input type="date" required value={date} onChange={(e) => setDate(e.target.value)}/>
+        </div>
+        <div className="departure-edit-field">
+          <span className="field-label">End Date</span>
+          <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)}/>
+        </div>
+        <div className="departure-edit-field">
+          <span className="field-label">Capacity</span>
+          <input type="number" required min="0" value={capacity} onChange={(e) => setCapacity(e.target.value)}/>
+        </div>
+        <div className="departure-edit-field">
+          <span className="field-label">Price per Person ({row.currency})</span>
+          <input type="number" required min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)}/>
+        </div>
+      </div>
+      <div className="departure-edit-summary">
+        <div className="summary-item">
+          <span className="summary-label">Duration</span>
+          <span className="summary-value">{durationDays} days</span>
+        </div>
+        <div className="summary-item">
+          <span className="summary-label">Total Revenue (est.)</span>
+          <span className="summary-value">{money(Number(capacity) * Number(price), row.currency)}</span>
+        </div>
+      </div>
+    </div>
+    <div className="departure-edit-actions">
+      <button className="button button-outline" type="button" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
+      <button className="button button-dark" type="button" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>
+    </div>
+  </div>;
 }
 
 function NotFound() {
@@ -1287,5 +1407,5 @@ export default function App() {
     <Route path="/admin/orders/:id" element={<Protected admin><AdminLayout night={night} onToggleTheme={() => setNight((value) => !value)}><Confirmation admin/></AdminLayout></Protected>}/>
     <Route path="*" element={<NotFound/>}/>
   </Routes>;
-  return <>{pathname === '/admin' || pathname.startsWith('/admin/') ? routes : <ClickSpark className="app-shell" targetSelector="[data-click-spark], .site-header a, .site-header button" sparkColor={night ? ['#83b5aa', '#d6e8e1', '#ffffff'] : ['#47766c', '#d2a36f', '#ffffff']} sparkSize={12} sparkRadius={28} duration={500} glow={0.35} ring><SpecularControls/><Header night={night} onToggleTheme={() => setNight((value) => !value)}/>{pathname === '/' ? routes : <FadeContent key={pathname} className="route-content" effect="focus" duration={0.6} trigger="mount">{routes}</FadeContent>}<Footer/>{cancelBooking && <CancelBookingModal booking={cancelBooking} onClose={() => setCancelBooking(null)} onRefresh={() => setCancellationRevision((value) => value + 1)}/>}</ClickSpark>}<ReviewReminder user={user} loginRevision={loginRevision} pathname={pathname}/></>;
+  return <>{pathname === '/admin' || pathname.startsWith('/admin/') ? routes : <ClickSpark className="app-shell" targetSelector="[data-click-spark], .site-header a, .site-header button" sparkColor={night ? ['#83b5aa', '#d6e8e1', '#ffffff'] : ['#47766c', '#d2a36f', '#ffffff']} sparkSize={12} sparkRadius={28} duration={500} glow={0.35} ring><SpecularControls/><Header night={night} onToggleTheme={() => setNight((value) => !value)}/>{pathname === '/' ? routes : <FadeContent key={pathname} className="route-content" effect="focus" duration={0.6} trigger="mount">{routes}</FadeContent>}<Footer/>{cancelBooking && <CancelBookingModal booking={cancelBooking} onClose={() => setCancelBooking(null)} onRefresh={() => setCancellationRevision((value) => value + 1)}/>}{pathname !== '/travo' && <TravoBubble/>}</ClickSpark>}<ReviewReminder user={user} loginRevision={loginRevision} pathname={pathname}/></>;
 }
