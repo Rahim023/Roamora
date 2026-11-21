@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpDown, CalendarDays, Check, ChevronDown, Compass,
+  ArrowLeft, ArrowRight, ArrowUpDown, ArrowUpRight, CalendarDays, Check, ChevronDown, Compass,
   Heart, MapPin, Menu, Minus, Plus, Search, ShieldCheck, SlidersHorizontal, Sparkles, LogIn,
   Star, X, Users, Plane, Clock3, LogOut, LayoutDashboard, CircleUserRound, LoaderCircle,
   Trash2, GripVertical, ListChecks, ChartNoAxesCombined, Package, Ticket, MessageSquareText, House, Map, ArrowLeftRight, BriefcaseBusiness,
-  Mail, LockKeyhole, UserRound, Eye, EyeOff, Sun, Moon,
+  Mail, LockKeyhole, UserRound, Eye, EyeOff, Sun, Moon, MoreVertical, Pencil, LayoutGrid, List, Tag, Info, CircleAlert,
 } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -28,6 +28,7 @@ import SpecularControls from './components/SpecularControls.jsx';
 import AnimatedSelect from './components/AnimatedSelect.jsx';
 import { packageImage } from './destinationImages.js';
 import { adminBookingReference, adminPersonName } from './adminDisplay.js';
+import { bookingTrend } from './bookingTrend.js';
 import roamoraLogo from './components/roamora-logo.png';
 import ExploreGlobe from './components/ExploreGlobe.jsx';
 import Travo from './components/Travo.jsx';
@@ -36,6 +37,7 @@ import './components/TravoBubble.css';
 import ClickSpark from './components/ClickSpark.jsx';
 import CircularCarousel from './components/CircularCarousel.jsx';
 import DestinationGuides from './components/DestinationGuides.jsx';
+import { HomepageDestinationCards } from './components/HomepageDestinations.jsx';
 import CometDial from './components/CometDial.jsx';
 import { CompareLayout } from './components/CompareStyles.js';
 import PasswordResetModal from './components/PasswordResetModal.jsx';
@@ -67,6 +69,7 @@ const tripPrice = (item) => item?.pricePerPersonMinor != null
   : item?.price ?? item?.priceFrom ?? item?.startingPrice;
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const journeyDate = (date) => date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'To be confirmed';
+const adminDepartureDate = (date) => date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium', timeZone: 'UTC' }) : 'To be confirmed';
 
 function JourneyBanner({ eyebrow, title, copy, children }) {
   const reduceMotion = useReducedMotion();
@@ -210,17 +213,22 @@ function useWishlist() {
 
 function Landing() {
   const [trips, setTrips] = useState([]);
+  const [destinations, setDestinations] = useState([]);
+  const [destinationError, setDestinationError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   useEffect(() => {
     endpoints.packages({ sort: 'popular', page: 1, limit: 3 }).then(({ data }) => setTrips(records(data).slice(0, 3)))
       .catch((e) => setError(errorMessage(e, 'Trips are taking a moment to load.')))
       .finally(() => setLoading(false));
+    endpoints.siteContent().then(({ data }) => setDestinations(data.content?.destinations || []))
+      .catch((e) => setDestinationError(errorMessage(e, 'Destinations could not be loaded.')));
   }, []);
   return <>
     <AdventureHero/>
     <TripFinder/>
     <TripShowcase trips={trips} getId={itemId} getImage={packageImage} getTitle={packageTitle} getPlace={tripPlace}>{loading ? <Loading/> : error ? <Alert>{error}</Alert> : <EmptyState title="Your next story starts here" copy="We're getting new journeys ready. Check back soon." action={<Link className="button button-light" to="/explore">Explore trips</Link>}/>}</TripShowcase>
+    {destinationError ? <div className="content-shell"><Alert>{destinationError}</Alert></div> : <HomepageDestinationCards destinations={destinations}/>}
     <TravelIntentions getId={itemId} getImage={packageImage} getTitle={packageTitle} getPlace={tripPlace} getPrice={tripPrice} formatMoney={money}/>
     <FadeContent className="closing-cta content-shell" effect="focus" duration={0.8}><div className="closing-icon"><Compass/></div><div><div className="eyebrow">YOUR NEXT CHAPTER</div><h2>Ready to get lost<br/>in the right direction?</h2></div><Link to="/explore" className="button button-dark button-large">Let’s wander <ArrowRight size={17}/></Link></FadeContent>
   </>;
@@ -823,8 +831,8 @@ function Confirmation({ admin = false }) {
           {packageId && <Link className="text-link" to={`/trips/${packageId}`}>View journey <ArrowRight size={15}/></Link>}
         </div>
       </section>
-      <aside className="booking-detail-summary"><div className="booking-summary-icon"><Ticket size={20}/></div><div className="eyebrow">BOOKING SUMMARY</div><h2>Your details.</h2><dl><div><dt>Reference</dt><dd>{reference}</dd></div><div><dt>Status</dt><dd>{order.status || 'Unavailable'}</dd></div>{order.contact?.email && <div><dt>Contact email</dt><dd>{order.contact.email}</dd></div>}<div className="booking-detail-total"><dt>Total</dt><dd>{money(order.totalMinor == null ? null : order.totalMinor / 100, order.currency || 'CAD')}</dd></div></dl>
-        {order.paymentMode === 'demo' && <p><ShieldCheck size={16}/> No payment was collected through this website.</p>}
+      <aside className="booking-detail-summary"><div className="booking-summary-icon"><Ticket size={20}/></div><div className="eyebrow">BOOKING SUMMARY</div><h2>Your details.</h2><dl><div><dt>Reference</dt><dd>{reference}</dd></div><div><dt>Status</dt><dd><span className={`status-pill status-${(order.status || 'pending').toLowerCase()}`}>{order.status || 'Unavailable'}</span></dd></div>{order.contact?.email && <div><dt>Contact email</dt><dd>{order.contact.email}</dd></div>}<div className="booking-detail-total"><dt>Total</dt><dd>{money(order.totalMinor == null ? null : order.totalMinor / 100, order.currency || 'CAD')}</dd></div>{order.paymentMode === 'external' && <><div><dt>Recorded external payments</dt><dd>{money(order.amountPaidMinor / 100, order.currency)}</dd></div>{order.refundedMinor > 0 && <div><dt>Recorded external refunds</dt><dd>{money(order.refundedMinor / 100, order.currency)}</dd></div>}</>}</dl>
+        <p><ShieldCheck size={16}/> No payment is collected through this website. External payment records are entered by an administrator.</p>
         <Link className="button button-dark button-full" to={backPath}>{admin ? 'Back to admin' : 'See my trips'} <ArrowRight size={16}/></Link>
       </aside>
     </div>
@@ -1057,25 +1065,145 @@ function Dashboard({ onRequestCancel, cancellationRevision }) {
 
 function AdminBarChart({ title, description, data, valueLabel, formatValue = (value) => value, emptyMessage }) {
   const reduceMotion = useReducedMotion();
+  const chartData = data.length ? data : [{ label: 'No data', value: 0 }];
   return <section className="chart-card admin-chart-card">
     <div className="admin-chart-heading"><div><div className="eyebrow">THE BREAKDOWN</div><h2>{title}</h2><p>{description}</p></div><span className="admin-section-mark"><ChartNoAxesCombined size={18}/></span></div>
-    {data.length ? <>
-      <div className="admin-bar-chart" style={{ height: Math.max(150, data.length * 38 + 32) }} aria-hidden="true">
-        <ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+      <div className="admin-bar-chart" style={{ height: Math.max(150, chartData.length * 38 + 32) }} aria-hidden="true">
+        <ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} layout="vertical" margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="#dce8dd" strokeDasharray="3 5" horizontal={false}/>
-          <XAxis type="number" allowDecimals={valueLabel !== 'Net payments'} tickLine={false} axisLine={false} tick={{ fill: '#788f81', fontSize: 11 }}/>
+          <XAxis type="number" allowDecimals={valueLabel !== 'Bookings' && valueLabel !== 'Customers'} tickLine={false} axisLine={false} tick={{ fill: '#788f81', fontSize: 11 }}/>
           <YAxis dataKey="label" type="category" width={105} tickLine={false} axisLine={false} tick={{ fill: '#788f81', fontSize: 11 }} tickFormatter={(value) => value.length > 15 ? `${value.slice(0, 14)}…` : value}/>
           <Tooltip cursor={{ fill: 'rgba(71,118,108,.08)' }} contentStyle={{ color: '#244e42', border: '1px solid #dfe9df', borderRadius: 10 }} formatter={(value) => [formatValue(value), valueLabel]}/>
           <Bar dataKey="value" fill="#47766c" radius={[0, 6, 6, 0]} maxBarSize={24} isAnimationActive={!reduceMotion}/>
         </BarChart></ResponsiveContainer>
       </div>
-      <details className="admin-chart-details"><summary>View chart values</summary><ul>{data.map(({ label, value }, index) => <li key={`${label}-${index}`}><span>{label}</span><strong>{formatValue(value)}</strong></li>)}</ul></details>
-    </> : <div className="chart-empty"><ChartNoAxesCombined size={21}/><span>{emptyMessage}</span></div>}
+      {data.length ? <details className="admin-chart-details"><summary>View chart values</summary><ul>{data.map(({ label, value }, index) => <li key={`${label}-${index}`}><span>{label}</span><strong>{formatValue(value)}</strong></li>)}</ul></details>
+        : <div className="chart-empty"><ChartNoAxesCombined size={21}/><span>{emptyMessage}</span></div>}
   </section>;
 }
 
-function Admin() {
-  const [tab, setTab] = useState('overview');
+function BookingValueChart({ analytics }) {
+  const [months, setMonths] = useState(6);
+  const [selectedCurrency, setSelectedCurrency] = useState('');
+  const reduceMotion = useReducedMotion();
+  const currencies = [...new Set([...(analytics.metrics?.bookingValue || []), ...(analytics.bookingValueByPeriod || [])].map((item) => item.currency))].sort();
+  const currency = currencies.includes(selectedCurrency) ? selectedCurrency : currencies.includes('CAD') ? 'CAD' : currencies[0];
+  const data = bookingTrend(analytics.bookingValueByPeriod || [], currency, months);
+  const thisMonth = (analytics.metrics?.expectedThisMonth || []).find((item) => item.currency === currency)?.amountMinor || 0;
+  return <section className="chart-card admin-trend" aria-labelledby="admin-trend-title">
+    <div className="admin-trend-heading">
+      <div><div className="eyebrow" id="admin-trend-title">BOOKING VALUE TREND</div><div className="admin-trend-total"><strong>{currency ? money(thisMonth / 100, currency) : '—'}</strong><span>This month</span></div></div>
+      <div className="admin-trend-controls">
+        {currencies.length > 1 && <label><span className="visually-hidden">Chart currency</span><select value={currency} onChange={(event) => setSelectedCurrency(event.target.value)}>{currencies.map((code) => <option key={code} value={code}>{code}</option>)}</select></label>}
+        <label><span className="visually-hidden">Chart period</span><select value={months} onChange={(event) => setMonths(Number(event.target.value))}><option value={6}>Last 6 months</option><option value={12}>Last 12 months</option></select></label>
+      </div>
+    </div>
+    <p className="admin-trend-note">Confirmed and completed booking values by booking month (UTC), not payments received.</p>
+    <div className="admin-trend-chart" aria-hidden="true"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{ top: 12, right: 12, bottom: 4, left: 0 }}>
+      <defs><linearGradient id="admin-booking-green" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#39865d" stopOpacity={0.28}/><stop offset="100%" stopColor="#39865d" stopOpacity={0.02}/></linearGradient></defs>
+      <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#dce5df"/>
+      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#70847a' }} minTickGap={20}/>
+      <YAxis axisLine={false} tickLine={false} width={78} tick={{ fontSize: 10, fill: '#70847a' }} tickFormatter={(value) => currency ? new Intl.NumberFormat('en-CA', { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }).format(value) : value}/>
+      <Tooltip formatter={(value) => [currency ? money(value, currency) : value, 'Booking value']}/>
+      <Area type="monotone" dataKey="value" stroke="#216341" strokeWidth={3} fill="url(#admin-booking-green)" dot={{ r: 3, fill: '#fff', strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={!reduceMotion}/>
+    </AreaChart></ResponsiveContainer></div>
+    {!currency && <p className="admin-trend-empty">Confirmed bookings will appear here.</p>}
+    {currency && <details className="admin-chart-details"><summary>View chart values</summary><ul>{data.map(({ period, month, value }) => <li key={period}><span>{month}</span><strong>{money(value, currency)}</strong></li>)}</ul></details>}
+  </section>;
+}
+
+function AdminSectionSummary({ tab, rows }) {
+  const count = (predicate) => rows.filter(predicate).length;
+  const summaries = {
+    packages: [['Journeys', rows.length], ['Active', count((row) => row.status === 'active')], ['Archived', count((row) => row.status === 'archived')]],
+    departures: [['Departures', rows.length], ['Scheduled', count((row) => row.status === 'scheduled')], ['Seats available', rows.reduce((total, row) => total + (row.status === 'scheduled' ? (row.availableSeats || 0) : 0), 0)]],
+    orders: [['Bookings', rows.length], ['Confirmed', count((row) => row.status === 'confirmed')], ['Completed', count((row) => row.status === 'completed')], ['Cancelled', count((row) => row.status === 'cancelled')]],
+    users: [['Accounts', rows.length], ['Travellers', count((row) => row.role === 'user')], ['Administrators', count((row) => row.role === 'admin')]],
+    reviews: [['Reviews', rows.length], ['Average rating', rows.length ? `${(rows.reduce((total, row) => total + row.rating, 0) / rows.length).toFixed(1)} / 5` : '—'], ['5-star reviews', count((row) => row.rating === 5)]],
+  };
+  const average = rows.length ? rows.reduce((total, row) => total + row.rating, 0) / rows.length : 0;
+  if (tab === 'reviews') return <div className="admin-rating-summary"><div><strong>{rows.length ? average.toFixed(1) : '—'} <small>/ 5</small></strong><AdminStars rating={Math.round(average)}/><span>Based on {rows.length} loaded {rows.length === 1 ? 'review' : 'reviews'}</span></div><div className="admin-rating-bars">{[5, 4, 3, 2, 1].map((rating) => {
+    const total = count((row) => row.rating === rating);
+    return <div key={rating}><span>{rating} <Star size={13} fill="currentColor"/></span><div className="admin-rating-track"><span style={{ width: `${rows.length ? total / rows.length * 100 : 0}%` }}/></div><strong>{total}</strong></div>;
+  })}</div></div>;
+  return <div className="admin-section-summary">{(summaries[tab] || []).map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>From loaded records</small></div>)}</div>;
+}
+
+function AdminStars({ rating }) {
+  return <div className="admin-rating-stars" aria-label={`${rating} out of 5 stars`}>{[1, 2, 3, 4, 5].map((star) => <Star key={star} size={19} fill="currentColor" className={star <= rating ? 'filled' : 'empty'}/>)}</div>;
+}
+
+function AdminTravellerDetail({ row, currentUserId, saving, onSave, onClose }) {
+  const initial = () => ({ name: row.name || '', email: row.email || '', role: row.role || 'user', isActive: row.isActive !== false, updatedAt: row.updatedAt || null });
+  const [form, setForm] = useState(initial);
+  useEffect(() => { setForm(initial()); }, [row._id, row.updatedAt]);
+  const isSelf = String(itemId(row)) === String(currentUserId);
+  return <aside className="admin-booking-detail admin-traveller-detail" aria-label="Traveller details">
+    <div className="admin-overview-card-heading"><div className="admin-person"><span className="admin-person-avatar">{(adminPersonName(row, row.name) || 'T').charAt(0).toUpperCase()}</span><div><h3>{adminPersonName(row, row.name) || 'Traveller'}</h3><span>{row.role === 'admin' ? 'Administrator' : 'Traveller'}</span></div></div><button type="button" onClick={onClose} aria-label="Close traveller details"><X size={18}/></button></div>
+    <h4>Account details</h4><dl><div><dt><Mail size={15}/> Email</dt><dd>{row.email || '—'}</dd></div><div><dt><ShieldCheck size={15}/> Role</dt><dd>{row.role === 'admin' ? 'Administrator' : 'Traveller'}</dd></div><div><dt><CalendarDays size={15}/> Joined</dt><dd>{journeyDate(row.createdAt)}</dd></div><div><dt><Check size={15}/> Status</dt><dd>{row.isActive === false ? 'Inactive' : 'Active'}</dd></div></dl>
+    <form className="admin-traveller-form" onSubmit={(event) => { event.preventDefault(); onSave(row, form); }}>
+      <h4>Edit account</h4>
+      <label>Name<input required minLength={2} maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })}/></label>
+      <label>Email<input required type="email" maxLength={254} value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label>
+      <label>Role<select disabled={isSelf} value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="user">Traveller</option><option value="admin">Administrator</option></select></label>
+      <label>Status<select disabled={isSelf} value={form.isActive ? 'active' : 'inactive'} onChange={(event) => setForm({ ...form, isActive: event.target.value === 'active' })}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+      {isSelf && <small>You cannot remove your own administrator access or deactivate your account.</small>}
+      {form.role === 'admin' && !form.isActive && <small>Demote an administrator before deactivating the account.</small>}
+      <div className="form-actions"><button type="button" className="button button-outline" disabled={saving} onClick={() => setForm(initial())}>Reset</button><button type="submit" className="button button-dark" disabled={saving || (form.role === 'admin' && !form.isActive)}>{saving ? 'Saving…' : 'Save changes'}</button></div>
+    </form>
+  </aside>;
+}
+
+function AdminActionMenu({ label, children }) {
+  return <details className="admin-action-menu"><summary aria-label={label}><MoreVertical size={17}/></summary><div>{children}</div></details>;
+}
+
+function AdminJourneyCard({ row, saving, onEdit, onArchive }) {
+  return <article className="admin-journey-card"><div className="admin-journey-image"><img src={packageImage(row)} alt=""/><AdminActionMenu label={`Actions for ${packageTitle(row)}`}><button type="button" disabled={saving} onClick={() => onEdit(row)}><Pencil size={14}/> Edit</button>{row.status !== 'archived' && <button type="button" disabled={saving} onClick={() => onArchive(row)}><Trash2 size={14}/> Archive</button>}</AdminActionMenu></div>
+    <div className="admin-journey-content"><h3>{packageTitle(row)}</h3><div className="admin-journey-style"><span><MapPin size={14}/> {row.travelType || 'Journey'}</span><span className={`status-pill status-${row.status || 'active'}`}>{row.status || 'active'}</span></div><div className="admin-journey-card-meta"><strong><Tag size={15}/> {money(tripPrice(row), row.currency || 'CAD')}</strong><span><CalendarDays size={15}/> {row.durationDays ?? '—'} days</span></div></div>
+  </article>;
+}
+
+function AdminReviewCard({ row, onDelete }) {
+  return <article className="admin-review-card"><img src={packageImage(row.package || {})} alt=""/><div className="admin-review-body"><div className="admin-review-top"><div className="admin-person"><span className="admin-person-avatar">{(adminPersonName(row.user, row.user?.name) || 'T').charAt(0).toUpperCase()}</span><div><strong>{adminPersonName(row.user, row.user?.name) || 'Traveller'}</strong><small className="admin-cell-detail">{row.package?.title || 'Journey'}</small></div></div><AdminStars rating={row.rating}/><time dateTime={row.createdAt}>{journeyDate(row.createdAt)}</time><AdminActionMenu label="Review actions"><button type="button" className="admin-danger-action" onClick={() => onDelete(row)}><Trash2 size={14}/> Delete review</button></AdminActionMenu></div>{row.title && <strong>{row.title}</strong>}<p>{row.comment || '—'}</p></div></article>;
+}
+
+function AdminDepartureCalendar({ rows, month, onMonth, day, onDay }) {
+  const displayMonth = month || new Date().toISOString().slice(0, 7);
+  const [year, monthNumber] = displayMonth.split('-').map(Number);
+  const first = new Date(Date.UTC(year, monthNumber - 1, 1));
+  const leading = (first.getUTCDay() + 6) % 7;
+  const days = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  const move = (offset) => {
+    const next = new Date(Date.UTC(year, monthNumber - 1 + offset, 1)).toISOString().slice(0, 7);
+    onMonth(next); onDay('');
+  };
+  const nextDeparture = rows.find((row) => row.status === 'scheduled' && new Date(row.startDate) >= new Date());
+  return <aside className="admin-calendar-column">
+    <div className="admin-calendar"><div className="admin-calendar-header"><button type="button" aria-label="Previous month" onClick={() => move(-1)}>‹</button><strong>{first.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })}</strong><button type="button" aria-label="Next month" onClick={() => move(1)}>›</button></div>
+      <div className="admin-calendar-grid">{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, index) => <span key={index}>{label}</span>)}{Array.from({ length: leading }, (_, index) => <span key={`empty-${index}`}/>)}{Array.from({ length: days }, (_, index) => {
+        const date = `${displayMonth}-${String(index + 1).padStart(2, '0')}`;
+        const hasDeparture = rows.some((row) => String(row.startDate || '').slice(0, 10) === date);
+        return <button type="button" key={date} className={`${day === date ? 'selected ' : ''}${hasDeparture ? 'has-departure' : ''}`} aria-label={`Filter departures on ${date}`} aria-pressed={day === date} onClick={() => { onMonth(displayMonth); onDay(day === date ? '' : date); }}>{index + 1}</button>;
+      })}</div><small>Departure dates shown in UTC</small>
+    </div>
+    {nextDeparture && <div className="admin-next-departure"><h3>Next departure</h3><img src={packageImage(nextDeparture.package || {})} alt=""/><strong><MapPin size={15}/> {packageTitle(nextDeparture.package)}</strong><span>{nextDeparture.package?.country || tripPlace(nextDeparture.package || {})}</span><span><CalendarDays size={14}/> {adminDepartureDate(nextDeparture.startDate)}</span><span><Users size={14}/> {nextDeparture.bookedSeats} / {nextDeparture.capacity} seats booked</span><button type="button" onClick={() => { const date = String(nextDeparture.startDate).slice(0, 10); onMonth(date.slice(0, 7)); onDay(date); }}>View departure <ArrowRight size={14}/></button></div>}
+  </aside>;
+}
+
+function Admin({ night, onToggleTheme }) {
+  const { section } = useParams();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const tab = section || 'overview';
+  const setTab = (next) => navigate(next === 'overview' ? '/admin' : `/admin/${next}`);
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchError, setSearchError] = useState('');
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [selectedSearchId, setSelectedSearchId] = useState(null);
+  const [selectedSearchTab, setSelectedSearchTab] = useState(null);
+  const searchSequence = useRef(0);
   const [analytics, setAnalytics] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1095,37 +1223,105 @@ function Admin() {
   const [uploadedImage, setUploadedImage] = useState('');
   const [saving, setSaving] = useState(false);
   const [reviewEmailBusy, setReviewEmailBusy] = useState('');
+  const [listSearch, setListSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [dayFilter, setDayFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [journeyView, setJourneyView] = useState('grid');
+  const [listPage, setListPage] = useState(1);
+  const [selectedBookingId, setSelectedBooking] = useState(undefined);
+  const [selectedUserId, setSelectedUser] = useState(undefined);
+  const [savingUser, setSavingUser] = useState(false);
+  const [departureFormOpen, setDepartureFormOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const loadSequence = useRef(0);
   const tabs = [
-    { key: 'overview', label: 'Overview', icon: ChartNoAxesCombined, description: 'The big picture' },
-    { key: 'packages', label: 'Journeys', icon: Package, description: 'Your travel collection' },
-    { key: 'departures', label: 'Departures', icon: CalendarDays, description: 'Dates and availability' },
+    { key: 'overview', label: 'Overview', icon: House, description: 'The big picture' },
+    { key: 'packages', label: 'Journeys', icon: Map, description: 'Manage and curate all Roamora travel journeys' },
+    { key: 'departures', label: 'Departures', icon: Plane, description: 'Manage and monitor scheduled departures across all journeys' },
     { key: 'orders', label: 'Bookings', icon: Ticket, description: 'Traveller reservations' },
-    { key: 'users', label: 'Travellers', icon: Users, description: 'Accounts and access' },
-    { key: 'reviews', label: 'Reviews', icon: MessageSquareText, description: 'Stories from the road' },
+    { key: 'users', label: 'Travellers', icon: Users, description: 'Account directory for all travellers and administrators' },
+    { key: 'reviews', label: 'Reviews', icon: Star, description: 'Stories from the road' },
   ];
   const activeSection = tabs.find((item) => item.key === tab);
   const destinationData = (analytics?.bookingsByDestination || []).map((item) => ({ label: item._id?.trim() || 'Unknown destination', value: item.bookings }));
   const customerData = (analytics?.customersByCountry || []).map((item) => ({ label: item._id?.trim() || 'Country not provided', value: item.customers }));
-  const revenueByCurrency = (analytics?.revenue || []).reduce((groups, item) => {
-    if (!groups[item.currency]) groups[item.currency] = [];
-    groups[item.currency].push({ label: item.period, value: item.netMinor / 100 });
-    return groups;
-  }, {});
-  const load = useCallback(async () => {
-    const sequence = ++loadSequence.current;
-    setLoading(true); setError('');
+  const visibleRows = rows.filter((row) => {
+    if (selectedSearchId && selectedSearchTab === tab && String(itemId(row)) !== selectedSearchId) return false;
+    const text = [row.title, row.destination, row.country, row.bookingReference, row.contact?.name, row.contact?.email, row.packageSnapshot?.title, row.packageSnapshot?.destination, row.package?.title, row.package?.destination, row.name, row.email, row.user?.name, row.comment].filter(Boolean).join(' ').toLowerCase();
+    return text.includes(listSearch.trim().toLowerCase())
+      && (!statusFilter || String(tab === 'users' ? row.role : tab === 'reviews' ? row.rating : row.status) === statusFilter)
+      && (!monthFilter || String(row.startDate || row.createdAt || '').slice(0, 7) === monthFilter)
+      && (!dayFilter || String(row.startDate || '').slice(0, 10) === dayFilter)
+      && (!categoryFilter || (tab === 'reviews' ? row.package?.destination : row.travelType) === categoryFilter);
+  });
+  const pageSize = tab === 'packages' || tab === 'departures' ? 6 : tab === 'reviews' ? 3 : 10;
+  const pageCount = Math.max(1, Math.ceil(visibleRows.length / pageSize));
+  const pageRows = visibleRows.slice((Math.min(listPage, pageCount) - 1) * pageSize, Math.min(listPage, pageCount) * pageSize);
+  const selectedBooking = rows.find((row) => String(itemId(row)) === selectedBookingId);
+  const selectedUser = rows.find((row) => String(itemId(row)) === selectedUserId);
+  useEffect(() => { setListPage(1); }, [tab, listSearch, statusFilter, monthFilter, dayFilter, categoryFilter, selectedSearchId]);
+  useEffect(() => { setListSearch(''); setStatusFilter(''); setMonthFilter(''); setDayFilter(''); setCategoryFilter(''); setSelectedBooking(undefined); setSelectedUser(undefined); }, [tab]);
+  const startNewPackage = () => {
+    setTab('packages'); setSelectedSearchId(null); setEditing(null); setOriginalPackage(null); setImageFile(null); setUploadedImage('');
+    setForm({ title: '', slug: '', country: '', destination: '', description: '', summary: '', accommodation: '', price: '', durationDays: '', nights: '', travelType: '', currency: 'CAD', status: 'active', featured: false, trending: false, freeCancellationDaysBefore: 0, refundPercent: 0 });
+    setShowForm(true);
+  };
+  const editPackage = (row) => {
+    setEditing(itemId(row)); setOriginalPackage(row); setImageFile(null); setUploadedImage('');
+    setForm({ title: row.title, slug: row.slug, destination: row.destination, country: row.country, description: row.description, summary: row.summary || '', accommodation: row.accommodation || '', price: tripPrice(row), durationDays: row.durationDays, nights: row.nights, travelType: row.travelType, currency: row.currency, status: row.status, featured: Boolean(row.featured), trending: Boolean(row.trending), freeCancellationDaysBefore: row.cancellationPolicy?.freeCancellationDaysBefore ?? 0, refundPercent: row.cancellationPolicy?.refundPercent ?? 0 });
+    setShowForm(true);
+  };
+  const searchAdmin = async (event) => {
+    event.preventDefault();
+    const query = search.trim().toLowerCase();
+    if (!query) { setSearchResults(null); return; }
+    const sequence = ++searchSequence.current;
+    setSearchBusy(true); setSearchError('');
     try {
-      if (tab === 'overview') { const { data } = await endpoints.analytics(); if (sequence === loadSequence.current) setAnalytics(data); }
-      else {
+      const [journeys, bookings, travellers] = await Promise.all([endpoints.adminPackages(), endpoints.adminOrders(), endpoints.adminUsers()]);
+      if (sequence !== searchSequence.current) return;
+      const match = (...values) => values.some((value) => String(value || '').toLowerCase().includes(query));
+      setSearchResults([
+        ...records(journeys.data).filter((row) => match(row.title, row.destination)).map((row) => ({ tab: 'packages', id: String(itemId(row)), label: packageTitle(row), detail: tripPlace(row) })),
+        ...records(bookings.data).filter((row) => match(row.bookingReference, row.contact?.name, row.packageSnapshot?.title)).map((row) => ({ tab: 'orders', id: String(itemId(row)), label: adminBookingReference(row), detail: row.packageSnapshot?.title || 'Journey' })),
+        ...records(travellers.data).filter((row) => match(row.name, row.email)).map((row) => ({ tab: 'users', id: String(itemId(row)), label: adminPersonName(row, row.name) || 'Traveller', detail: row.email })),
+      ].slice(0, 10));
+    } catch (failure) { if (sequence === searchSequence.current) setSearchError(errorMessage(failure, 'Search failed.')); }
+    finally { if (sequence === searchSequence.current) setSearchBusy(false); }
+  };
+  const load = useCallback(async (silent = false) => {
+    const sequence = ++loadSequence.current;
+    if (!silent) setLoading(true);
+    setError('');
+    try {
+      if (tab === 'overview') {
+        const now = new Date();
+        const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1)).toISOString();
+        const { data } = await endpoints.analytics({ from });
+        if (sequence === loadSequence.current) setAnalytics(data);
+      }
+      else if (activeSection) {
         const get = { packages: endpoints.adminPackages, departures: endpoints.adminDepartures, orders: endpoints.adminOrders, users: endpoints.adminUsers, reviews: endpoints.adminReviews }[tab];
-        const { data } = await get(); if (sequence === loadSequence.current) setRows(records(data));
+        const { data } = await get();
+        if (sequence === loadSequence.current) {
+          const items = records(data);
+          setRows(items);
+          if (items.length && tab === 'orders') setSelectedBooking((current) => current === undefined ? String(itemId(items[0])) : current);
+          if (items.length && tab === 'users') setSelectedUser((current) => current === undefined ? String(itemId(items[0])) : current);
+        }
       }
     } catch (e) { if (sequence === loadSequence.current) setError(errorMessage(e, 'Admin data could not be loaded.')); }
     finally { if (sequence === loadSequence.current) setLoading(false); }
   }, [tab]);
-  useEffect(() => { setRows([]); if (tab === 'overview') setAnalytics(null); load(); return () => { loadSequence.current += 1; }; }, [load, tab]);
+  useEffect(() => {
+    setRows([]);
+    if (tab === 'overview') setAnalytics(null);
+    load();
+    const timer = tab === 'overview' ? setInterval(() => load(true), 30000) : null;
+    return () => { if (timer) clearInterval(timer); loadSequence.current += 1; };
+  }, [load, tab]);
   const submitPackage = async (e) => {
     e.preventDefault();
     if (saving) return;
@@ -1187,64 +1383,131 @@ function Admin() {
     } catch (failure) { setError(errorMessage(failure)); }
     finally { setReviewEmailBusy(''); }
   };
-  const promoteUser = async (id) => {
-    try { await endpoints.promoteUser(id); notify('Administrator access granted.'); await load(); }
-    catch (e) { setError(errorMessage(e)); }
+  const saveTraveller = (row, changes) => {
+    setConfirmation({
+      title: 'Save account changes?',
+      description: 'Changing email, role or account status signs this user out. Email changes also invalidate any pending password reset.',
+      confirmLabel: 'Save changes',
+      action: async () => {
+        setSavingUser(true); setError('');
+        try {
+          await endpoints.updateAdminUser(itemId(row), changes);
+          if (String(itemId(row)) === String(itemId(user)) && row.email.toLowerCase() !== changes.email.trim().toLowerCase()) {
+            signOut(); navigate('/login'); return;
+          }
+          notify('Account updated.'); await load();
+        } catch (failure) { setError(errorMessage(failure, 'Account could not be updated.')); }
+        finally { setSavingUser(false); }
+      },
+    });
   };
-  return <main className="content-shell page-content admin-page"><motion.div className="admin-heading" initial={reduceMotion ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}><div><div className="eyebrow">THE ROAMORA CONTROL ROOM <span> / </span> ADMINISTRATION</div><h1>Everything in<br/><em>its place.</em></h1><p>A calmer way to manage the journeys, bookings and people behind every adventure.</p></div><div className="admin-heading-aside"><span className="admin-badge"><ShieldCheck size={15}/> Private workspace</span><Compass size={64} strokeWidth={0.8} aria-hidden="true"/><small>MADE FOR THE JOURNEY</small></div></motion.div>
+  if (!activeSection) return <Navigate to="/admin" replace/>;
+  return <main className="admin-page admin-dashboard">
     <div className="admin-workspace">
-    <nav className="admin-tabs" aria-label="Admin sections"><div className="admin-nav-label">YOUR WORKSPACE <span>01 — 06</span></div>{tabs.map(({ key, label, icon: Icon, description }) => <button type="button" disabled={saving} aria-pressed={tab === key} className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setShowForm(false); }}><span className="admin-nav-icon"><Icon size={17}/></span><span className="admin-nav-copy"><strong>{label}</strong><small>{description}</small></span><ArrowRight className="admin-nav-arrow" size={15}/></button>)}<div className="admin-nav-foot"><ShieldCheck size={15}/> Authorized access only</div></nav>
-    <motion.div key={tab} className="admin-workspace-content" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-    {error && <Alert>{error}</Alert>}
-    {loading ? <Loading/> : tab === 'overview' ? analytics && <div className="admin-overview"><div className="admin-section-intro"><div><div className="eyebrow">YOUR BUSINESS AT A GLANCE</div><h2>The overview.</h2><p>Bookings, journeys and travellers at a glance.</p></div><span className="admin-section-mark"><Sparkles size={18}/></span></div><div className="metric-grid">{[['Confirmed & completed', analytics?.metrics?.confirmedBookings ?? '—', 'Confirmed or completed bookings', Ticket], ['Active journeys', analytics?.metrics?.activePackages ?? '—', 'Currently active journeys', Package], ['Travellers', analytics?.metrics?.customers ?? '—', 'Customer accounts', Users], ['Revenue', analytics?.metrics?.netExternalPayments && analytics.metrics.netExternalPayments.length ? money(analytics.metrics.netExternalPayments.reduce((sum, { netMinor }) => sum + (netMinor ?? 0), 0) / 100, analytics.metrics.netExternalPayments[0]?.currency || 'CAD') : '—', 'Net external payments', Ticket]].map(([label, value, detail, Icon]) => <div key={label} className="metric-card"><div className="admin-metric-top"><span>{label}</span><span className="admin-metric-icon"><Icon size={17}/></span></div><strong>{value}</strong><small>{detail}</small></div>)}</div>
-      <div className="admin-chart-grid">
-        <AdminBarChart title="Bookings by destination" description="Top destinations for confirmed and completed bookings, all time." data={destinationData} valueLabel="Bookings" emptyMessage="Confirmed and completed bookings will appear here."/>
-        <AdminBarChart title="Customers by country" description="Top countries for customer accounts, all time. Missing countries are included." data={customerData} valueLabel="Customers" emptyMessage="Customer accounts will appear here."/>
+    <nav className="admin-tabs" aria-label="Admin sections">
+      <Link to="/" className="admin-sidebar-brand"><strong>Roamora</strong><span>PRIVATE WORKSPACE</span></Link>
+      <div className="admin-sidebar-links">{tabs.map(({ key, label, icon: Icon }) => <NavLink end to={key === 'overview' ? '/admin' : `/admin/${key}`} className={({ isActive }) => `admin-section-link${isActive ? ' active' : ''}`} key={key} onClick={(event) => { if (saving) { event.preventDefault(); return; } setSelectedSearchId(null); setShowForm(false); }}><span className="admin-nav-icon"><Icon size={17}/></span><span className="admin-nav-copy"><strong>{label}</strong></span></NavLink>)}</div>
+      <div className="admin-sidebar-account"><span className="admin-person-avatar">{(user?.name || 'A').charAt(0).toUpperCase()}</span><span><strong>{user?.name || 'Administrator'}</strong><small>Administrator</small></span></div>
+      <button type="button" className="admin-sidebar-signout" onClick={() => { signOut(); navigate('/login'); }}><LogOut size={16}/> Sign out</button>
+    </nav>
+    <div className="admin-workspace-content">
+    <header className="admin-dashboard-header">
+      <div className="admin-search-wrap"><form className="admin-search" onSubmit={searchAdmin}><Search size={16}/><input aria-label="Search journeys, bookings and travellers" placeholder="Search journeys, bookings, travellers..." value={search} onChange={(event) => { setSearch(event.target.value); setSearchResults(null); setSearchError(''); setSearchBusy(false); searchSequence.current += 1; }}/><button type="submit" disabled={searchBusy}>{searchBusy ? 'Searching…' : 'Search'}</button></form>
+        {(searchResults || searchError) && <div className="admin-search-results" role="status">{searchError || (searchResults.length ? searchResults.map((result) => <button key={`${result.tab}-${result.id}`} type="button" onClick={() => { setSearchResults(null); setSearch(''); setShowForm(false); if (result.tab === 'orders') navigate(`/admin/orders/${result.id}`); else { setSelectedSearchId(result.id); setSelectedSearchTab(result.tab); setTab(result.tab); } }}><strong>{result.label}</strong><small>{result.tab === 'packages' ? 'Journey' : result.tab === 'orders' ? 'Booking' : 'Traveller'} · {result.detail}</small></button>) : <span>No matches in the loaded admin records.</span>)}</div>}
       </div>
-      <div className="chart-card admin-payments"><div><div className="eyebrow">PAYMENT OVERVIEW</div><h2>Recorded external payments</h2><p>Totals reflect recorded external payments, less recorded refunds, and are not independently verified with a payment provider.</p></div>{analytics?.metrics?.netExternalPayments?.length ? <div className="admin-payment-totals">{analytics.metrics.netExternalPayments.map(({ currency, netMinor }) => <div key={currency}><span>{currency}</span><strong>{money(netMinor / 100, currency)}</strong></div>)}</div> : <div className="chart-empty"><ShieldCheck size={21}/><strong>No external payments recorded yet</strong><span>Only recorded external payments are included in these totals.</span></div>}</div>
-      {Object.keys(revenueByCurrency).length ? <div className="admin-chart-grid">{Object.entries(revenueByCurrency).map(([currency, data]) => <AdminBarChart key={currency} title={`Net payments · ${currency}`} description="Recorded external payments less recorded refunds by month, this year through today." data={data} valueLabel="Net payments" formatValue={(value) => money(value, currency)}/>)}</div> : <AdminBarChart title="Net payments by month" description="Recorded external payments less recorded refunds, this year through today. Currencies are shown separately." data={[]} valueLabel="Net payments" emptyMessage="No external payment activity recorded for this year."/>}
-      <div className="admin-recent"><div className="admin-recent-heading"><div><div className="eyebrow">LATEST ACTIVITY</div><h2>Recent bookings.</h2><p>Most recent booking records.</p></div><button type="button" onClick={() => setTab('orders')}>View all <ArrowRight size={15}/></button></div>{analytics?.recentOrders?.length ? <div className="admin-recent-list">{analytics.recentOrders.map((order) => <Link key={itemId(order)} to={`/admin/orders/${itemId(order)}`} className="admin-recent-row"><span className="admin-recent-icon"><Ticket size={17}/></span><span className="admin-recent-name"><strong>{order.packageSnapshot?.title || 'Journey'}</strong><small>{adminBookingReference(order)} · {adminPersonName(order, order.contact?.name) || 'Traveller'}</small></span><span className={`status-pill status-${(order.status || 'pending').toLowerCase()}`}>{order.status || 'Pending'}</span><ArrowRight size={15}/></Link>)}</div> : <div className="admin-recent-empty">New bookings will appear here.</div>}</div></div>
-      : <section className="admin-list-section"><div className="admin-list-heading"><div><div className="eyebrow">YOUR WORKSPACE / {activeSection.label.toUpperCase()}</div><h2>{activeSection.label}.</h2><p>{activeSection.description}. <span>{rows.length} {rows.length === 1 ? 'record' : 'records'} shown</span></p></div>{tab === 'packages' && <button className="button button-dark" disabled={saving} onClick={() => { setEditing(null); setOriginalPackage(null); setImageFile(null); setUploadedImage(''); setForm({ title: '', slug: '', country: '', destination: '', description: '', price: '', durationDays: '', nights: '', travelType: '', currency: 'CAD', freeCancellationDaysBefore: 0, refundPercent: 0 }); setShowForm(!showForm); }}><Plus size={15}/> Add journey</button>}</div>
-        {tab === 'departures' && <div className="admin-departure-create"><DepartureCreate onCreated={() => { notify('Departure created.'); load(); }}/></div>}
-        {showForm && <form className="admin-edit-form" onSubmit={submitPackage}><h3>{editing ? 'Edit journey' : 'New journey'}</h3><div className="form-grid">{[['title','Title'],['slug','Slug (lowercase, hyphenated)'],['destination','Destination'],['country','Country'],['travelType','Travel style'],['currency','Currency']].map(([key,label]) => <label key={key}>{label}<input required value={form[key] ?? ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}/></label>)}{[['price','Price per person','0','0.01'],['durationDays','Duration (days)','1','1'],['nights','Nights','0','1'],['freeCancellationDaysBefore','Free cancellation days before','0','1'],['refundPercent','Refund percent','0','1']].map(([key,label,min,step]) => <label key={key}>{label}<input required type="number" min={min} max={key === 'refundPercent' ? 100 : undefined} step={step} value={form[key] ?? ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}/></label>)}<label className="span-two">Description<textarea required rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}/></label><label className="span-two">Journey image <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { setImageFile(e.target.files?.[0] || null); setUploadedImage(''); }}/><small>JPEG, PNG or WebP, up to 5 MB. Uploaded when you save.</small>{uploadedImage && <small>Image uploaded and ready to save.</small>}</label></div><div className="form-actions"><button type="button" className="button button-outline" disabled={saving} onClick={() => setShowForm(false)}>Cancel</button><button className="button button-dark" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Create journey'}</button></div></form>}
-        {!rows.length ? !error && <EmptyState title={`No ${activeSection.label.toLowerCase()} yet.`} copy="When records are available, they'll show up here."/> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr>{(tab === 'packages' ? ['Journey', 'Destination', 'Price', 'Duration', 'Actions'] : tab === 'departures' ? ['Departure', 'Journey', 'Date', 'Seats', 'Actions'] : tab === 'orders' ? ['Order', 'Traveller', 'Status', 'Booking value', 'Actions'] : tab === 'users' ? ['Name', 'Email', 'Role', 'Joined'] : ['Review', 'Traveller', 'Rating', 'Actions']).map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{rows.map((row) => {
+      <ThemeSwitch night={night} onToggle={onToggleTheme}/><Link to="/" className="admin-dashboard-site"><ArrowUpRight size={15}/> View site</Link>
+    </header>
+    {tab === 'overview' && <div className="admin-dashboard-title"><div><div className="eyebrow">THE ROAMORA CONTROL ROOM <span> / </span> ADMINISTRATION</div><h1>Your workspace overview.</h1><p>Bookings, journeys and travellers at a glance.</p></div><button type="button" className="button button-dark" onClick={startNewPackage}><Plus size={16}/> New journey</button></div>}
+    <motion.div key={tab} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+    {error && <Alert>{error}</Alert>}
+    {loading ? <Loading/> : tab === 'overview' ? analytics && <div className="admin-overview">
+      <div className="metric-grid">{[['Confirmed & completed bookings', analytics.metrics?.confirmedBookings ?? '—', 'All time', ChartNoAxesCombined], ['Active journeys', analytics.metrics?.activePackages ?? '—', 'Currently active', Package], ['Travellers', analytics.metrics?.customers ?? '—', 'Customer accounts', Users], ['Booking value', analytics.metrics?.bookingValue?.length === 1 ? money(analytics.metrics.bookingValue[0].amountMinor / 100, analytics.metrics.bookingValue[0].currency) : analytics.metrics?.bookingValue?.length > 1 ? 'By currency' : '—', 'Not payments received', Ticket]].map(([label, value, detail, Icon]) => <div key={label} className="metric-card"><span className="admin-metric-icon"><Icon size={17}/></span><div><span>{label}</span><strong className={label === 'Booking value' ? 'admin-metric-money' : undefined}>{value}</strong><small>{detail}</small>{label === 'Booking value' && analytics.metrics?.bookingValue?.length > 1 && <details className="admin-metric-currencies"><summary>View totals</summary>{analytics.metrics.bookingValue.map(({ currency, amountMinor }) => <span key={currency}>{money(amountMinor / 100, currency)}</span>)}</details>}</div></div>)}</div>
+      <div className="admin-overview-primary"><BookingValueChart analytics={analytics}/>
+        <section className="chart-card admin-upcoming"><div className="admin-overview-card-heading"><div className="eyebrow">UPCOMING DEPARTURES</div><button type="button" onClick={() => setTab('departures')}>View all <ArrowRight size={14}/></button></div>
+          {analytics.departures?.length ? <div className="admin-upcoming-list">{analytics.departures.slice(0, 3).map((departure) => <div className="admin-upcoming-row" key={itemId(departure)}><img src={packageImage(departure.package || {})} alt=""/><div><strong>{departure.package?.destination || packageTitle(departure.package)}</strong><small><CalendarDays size={13}/> {journeyDate(departure.startDate)}{departure.endDate ? ` – ${journeyDate(departure.endDate)}` : ''}</small></div><span>{departure.availableSeats ?? '—'} seats left</span></div>)}</div> : <p className="admin-overview-empty">No upcoming departures scheduled.</p>}
+        </section>
+      </div>
+      <section className="chart-card admin-overview-recent"><div className="admin-overview-card-heading"><div className="eyebrow">RECENT BOOKINGS</div><button type="button" onClick={() => setTab('orders')}>View all bookings <ArrowRight size={14}/></button></div>
+        {analytics.recentOrders?.length ? <div className="admin-overview-table-wrap"><table className="admin-overview-table"><thead><tr><th>Booking ID</th><th>Traveller</th><th>Journey</th><th>Departure date</th><th>Value</th><th>Status</th></tr></thead><tbody>{analytics.recentOrders.slice(0, 5).map((order) => <tr key={itemId(order)}><td><Link to={`/admin/orders/${itemId(order)}`}>{adminBookingReference(order)}</Link></td><td>{adminPersonName(order, order.contact?.name) || 'Traveller'}</td><td>{order.packageSnapshot?.title || 'Journey'}</td><td>{journeyDate(order.startDate)}</td><td>{money(order.totalMinor == null ? null : order.totalMinor / 100, order.currency || 'CAD')}</td><td><span className={`status-pill status-${(order.status || 'pending').toLowerCase()}`}>{order.status || 'Pending'}</span></td></tr>)}</tbody></table></div> : <p className="admin-overview-empty">New bookings will appear here.</p>}
+      </section>
+      <div className="admin-chart-grid">
+        <AdminBarChart title="Bookings by destination" description="Confirmed and completed bookings, all time." data={destinationData} valueLabel="Bookings" emptyMessage="Confirmed and completed bookings will appear here."/>
+        <AdminBarChart title="Travellers by country" description="Customer accounts, including missing countries." data={customerData} valueLabel="Customers" emptyMessage="Customer accounts will appear here."/>
+      </div>
+    </div>
+      : <section className={`admin-list-section admin-section-${tab}`}><div className="admin-list-heading"><div>{['departures', 'orders'].includes(tab) && <div className="eyebrow">{tab === 'departures' ? 'OPERATIONS' : 'BOOKINGS'}</div>}<h2>{activeSection.label}</h2><p>{['reviews', 'orders'].includes(tab) ? `${rows.length} loaded ${activeSection.label.toLowerCase()}` : activeSection.description}</p></div>{tab === 'packages' && <button className="button button-dark" disabled={saving} onClick={startNewPackage}><Plus size={17}/> Add journey</button>}{tab === 'users' && <AdminSectionSummary tab={tab} rows={rows}/>}</div>
+        {tab === 'reviews' && <div className="admin-review-overview"><AdminSectionSummary tab={tab} rows={rows}/><div className="admin-review-filters"><label>Destination<select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="">All destinations</option>{[...new Set(rows.map((row) => row.package?.destination).filter(Boolean))].sort().map((value) => <option key={value}>{value}</option>)}</select></label><label>Rating<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All ratings</option>{[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{value} stars</option>)}</select></label><label>Search reviews<input placeholder="Traveller, journey or comment" value={listSearch} onChange={(event) => setListSearch(event.target.value)}/></label></div></div>}
+        {tab === 'departures' && departureFormOpen && <div className="admin-departure-create"><DepartureCreate onClose={() => setDepartureFormOpen(false)} onCreated={() => { setDepartureFormOpen(false); notify('Departure created.'); load(); }}/></div>}
+        {showForm && tab === 'packages' && <form className="admin-edit-form admin-journey-form" onSubmit={submitPackage}>
+          <div className="eyebrow">JOURNEY DETAILS</div><h3>{editing ? 'Edit journey' : 'Create a journey'}</h3><p>Tell travellers where they are going and what to expect. Existing itinerary details are kept when editing.</p>
+          <div className="form-grid">{[['title','Journey title'],['slug','Slug (lowercase, hyphenated)'],['destination','Destination'],['country','Country'],['travelType','Travel style'],['currency','Currency']].map(([key,label]) => <label key={key}>{label}<input required value={form[key] ?? ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}/></label>)}
+            <label>Accommodation (optional)<input maxLength={200} value={form.accommodation ?? ''} onChange={(e) => setForm({ ...form, accommodation: e.target.value })}/></label><label>Status<select value={form.status || 'active'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></label>
+            {editing && <label className="span-two">Current image<img className="admin-form-image" src={packageImage(originalPackage)} alt="Current journey"/></label>}
+            <label className="span-two">Journey image <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { setImageFile(e.target.files?.[0] || null); setUploadedImage(''); }}/><small>JPEG, PNG or WebP, up to 5 MB. Uploaded when you save.</small>{uploadedImage && <small>Image uploaded and ready to save.</small>}</label>
+            <label className="span-two">Short summary (optional)<textarea rows="2" maxLength={500} value={form.summary ?? ''} onChange={(e) => setForm({ ...form, summary: e.target.value })}/></label><label className="span-two">Description<textarea required rows="4" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}/></label>
+            {[
+              ['price','Price per person','0','0.01'],['durationDays','Duration (days)','1','1'],['nights','Nights','0','1'],['freeCancellationDaysBefore','Free cancellation days before','0','1'],['refundPercent','Refund percent','0','1'],
+            ].map(([key,label,min,step]) => <label key={key}>{label}<input required type="number" min={min} max={key === 'refundPercent' ? 100 : undefined} step={step} value={form[key] ?? ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}/></label>)}
+            <div className="admin-form-checks span-two"><label><input type="checkbox" checked={Boolean(form.featured)} onChange={(e) => setForm({ ...form, featured: e.target.checked })}/> Featured journey</label><label><input type="checkbox" checked={Boolean(form.trending)} onChange={(e) => setForm({ ...form, trending: e.target.checked })}/> Trending journey</label></div>
+          </div><div className="form-actions"><button type="button" className="button button-outline" disabled={saving} onClick={() => setShowForm(false)}>Cancel</button><button className="button button-dark" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Create journey'}</button></div></form>}
+        {selectedSearchId && selectedSearchTab === tab && <button type="button" className="button button-outline" onClick={() => setSelectedSearchId(null)}>Show all {activeSection.label.toLowerCase()}</button>}
+        {tab === 'orders' && <div className="admin-status-tabs">{[['', 'All'], ['pending', 'Pending'], ['confirmed', 'Confirmed'], ['completed', 'Completed'], ['cancelled', 'Cancelled']].map(([value, label]) => <button key={value} type="button" aria-pressed={statusFilter === value} onClick={() => setStatusFilter(value)}>{label} ({value ? rows.filter((row) => row.status === value).length : rows.length})</button>)}</div>}
+        {tab !== 'reviews' && <div className="admin-list-toolbar">
+          {tab === 'departures' && <button type="button" className="button button-dark" onClick={() => setDepartureFormOpen((open) => !open)}><Plus size={16}/> Add departure</button>}
+          {tab === 'packages' && <strong className="admin-toolbar-count">{visibleRows.length} journeys</strong>}
+          <label className="admin-list-search"><Search size={16}/><input aria-label={`Search ${activeSection.label.toLowerCase()}`} placeholder={`Search ${activeSection.label.toLowerCase()}...`} value={listSearch} onChange={(event) => setListSearch(event.target.value)}/></label>
+          {tab === 'packages' && <label><span className="visually-hidden">Filter by travel style</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="">All categories</option>{[...new Set(rows.map((row) => row.travelType).filter(Boolean))].sort().map((value) => <option key={value}>{value}</option>)}</select></label>}
+          {tab !== 'orders' && <label><span className="visually-hidden">Filter by {tab === 'users' ? 'role' : 'status'}</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All {tab === 'users' ? 'roles' : 'statuses'}</option>{[...new Set(rows.map((row) => tab === 'users' ? row.role : row.status).filter((value) => value != null))].sort().map((value) => <option key={value} value={value}>{value}</option>)}</select></label>}
+          {tab === 'packages' && <div className="admin-view-switch" aria-label="Journey view"><button type="button" aria-label="Grid view" aria-pressed={journeyView === 'grid'} onClick={() => setJourneyView('grid')}><LayoutGrid size={16}/></button><button type="button" aria-label="List view" aria-pressed={journeyView === 'list'} onClick={() => setJourneyView('list')}><List size={16}/></button></div>}
+          {['departures', 'orders', 'users'].includes(tab) && <label><span className="visually-hidden">Filter by month</span><input type="month" value={monthFilter} onChange={(event) => { setMonthFilter(event.target.value); setDayFilter(''); }}/></label>}
+        </div>}
+        <div className={`admin-list-results${tab === 'departures' || selectedBooking || selectedUser ? ' has-side-panel' : ''}`}>
+        {tab === 'departures' && <AdminDepartureCalendar rows={rows} month={monthFilter} onMonth={setMonthFilter} day={dayFilter} onDay={setDayFilter}/>}
+        {!visibleRows.length ? !error && <EmptyState title={`No ${activeSection.label.toLowerCase()} found.`} copy="Try changing your filters, or check back when records are available."/> : tab === 'packages' && journeyView === 'grid' ? <div className="admin-journey-grid">{pageRows.map((row) => <AdminJourneyCard key={itemId(row)} row={row} saving={saving} onEdit={editPackage} onArchive={(journey) => setConfirmation({ title: 'Archive this journey?', description: 'It will no longer appear in public listings.', confirmLabel: 'Archive journey', action: () => deletePackage(itemId(journey)) })}/>)}</div> : tab === 'reviews' ? <div className="admin-review-grid">{pageRows.map((row) => <AdminReviewCard key={itemId(row)} row={row} onDelete={(review) => setConfirmation({ title: 'Delete this review?', description: 'This will remove the review.', confirmLabel: 'Delete review', action: () => deleteReview(itemId(review)) })}/>)}</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr>{(tab === 'packages' ? ['Journey', 'Destination', 'Price', 'Duration', 'Actions'] : tab === 'departures' ? ['Journey', 'Departure ID', 'Status', 'Date', 'Seats', 'Occupancy', 'Actions'] : tab === 'orders' ? ['Booking reference', 'Journey', 'Traveller', 'Status', 'Booking value', 'Details'] : ['Name', 'Email', 'Role', 'Joined']).map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{pageRows.map((row) => {
           const id = itemId(row);
-          if (tab === 'packages') return <tr key={id}><td data-label="Journey"><div className="admin-journey-cell"><img src={packageImage(row)} alt=""/><span><strong>{packageTitle(row)}</strong><small className="admin-cell-detail">{row.travelType || 'Journey'} · {row.status || 'active'}</small></span></div></td><td data-label="Destination">{tripPlace(row)}</td><td data-label="Price">{money(tripPrice(row), row.currency || 'USD')}</td><td data-label="Duration">{row.durationDays || row.days || '—'} days</td><td data-label="Actions"><div className="table-actions"><button disabled={saving} onClick={() => { setEditing(id); setOriginalPackage(row); setImageFile(null); setUploadedImage(''); setForm({ title: row.title, slug: row.slug, destination: row.destination, country: row.country, description: row.description, price: tripPrice(row), durationDays: row.durationDays, nights: row.nights, travelType: row.travelType, currency: row.currency, freeCancellationDaysBefore: row.cancellationPolicy?.freeCancellationDaysBefore ?? 0, refundPercent: row.cancellationPolicy?.refundPercent ?? 0 }); setShowForm(true); }}>Edit</button><button disabled={saving} onClick={() => setConfirmation({ title: 'Archive this journey?', description: 'It will no longer appear in public listings.', confirmLabel: 'Archive journey', action: () => deletePackage(id) })}>Archive</button></div></td></tr>;
-          if (tab === 'departures') return <tr key={id}><td data-label="Departure"><strong>{String(id).slice(-8).toUpperCase()}</strong><small className={`admin-cell-detail status-${(row.status || 'scheduled').toLowerCase()}`}>{row.status || 'Scheduled'}</small></td><td data-label="Journey">{packageTitle(row.package || row)}</td><td data-label="Date">{row.startDate ? new Date(row.startDate).toLocaleDateString() : '—'}</td><td data-label="Seats">{row.availableSeats ?? '—'}{row.capacity != null && <small className="admin-cell-detail">of {row.capacity} available</small>}</td><td data-label="Actions"><DepartureActions row={row} onChanged={() => { notify('Departure updated.'); load(); }} onError={setError}/></td></tr>;
-          if (tab === 'orders') return <tr key={id}><td data-label="Order"><strong>{adminBookingReference(row)}</strong><small className="admin-cell-detail">{row.packageSnapshot?.title || 'Journey'}</small></td><td data-label="Traveller">{adminPersonName(row, row.contact?.name) || adminPersonName(row.user, row.user?.name) || '—'}</td><td data-label="Status"><span className={`status-pill status-${(row.status || 'pending').toLowerCase()}`}>{row.status || 'Pending'}</span>{row.status === 'completed' && <small className="admin-cell-detail">Review email: {row.reviewEmailStatus === 'sent' ? 'sent' : row.reviewEmailStatus === 'not_needed' ? 'already reviewed' : row.reviewEmailStatus === 'pending' ? 'sending or awaiting retry' : row.reviewEmailStatus === 'failed' ? 'failed' : row.reviewEmailStatus === 'not_configured' ? 'SMTP not configured' : 'not recorded'}</small>}</td><td data-label="Booking value">{money(row.totalMinor == null ? null : row.totalMinor / 100, row.currency || 'CAD')}<small className="admin-cell-detail">{row.paymentMode === 'demo' ? 'No payment collected' : 'Booking value'}</small></td><td data-label="Actions"><div className="admin-row-actions"><Link to={`/admin/orders/${id}`}>View details</Link>{row.status === 'confirmed' && <button onClick={() => setConfirmation({ title: 'Complete this booking?', description: 'The booking will be marked completed and a review request will be sent to its contact email unless the journey was already reviewed.', confirmLabel: 'Mark completed', action: () => completeOrder(id) })}>Mark completed</button>}{row.status === 'completed' && !['sent', 'not_needed'].includes(row.reviewEmailStatus) && <button disabled={Boolean(reviewEmailBusy)} onClick={() => retryReviewEmail(id)}>{reviewEmailBusy === id ? 'Sending…' : 'Retry review email'}</button>}</div></td></tr>;
-          if (tab === 'users') return <tr key={id}><td data-label="Name"><div className="admin-person"><span className="admin-person-avatar">{(adminPersonName(row, row.name) || 'T').charAt(0).toUpperCase()}</span><strong>{adminPersonName(row, row.name) || '—'}</strong></div></td><td data-label="Email">{row.email || '—'}</td><td data-label="Role"><select disabled={saving} value={row.role || 'user'} onChange={(e) => { if (e.target.value !== row.role) setConfirmation({ title: `Change role to ${e.target.value}?`, description: `${adminPersonName(row, row.name) || row.email} will receive updated access permissions.`, confirmLabel: `Change to ${e.target.value}`, action: () => promoteUser(id, e.target.value) }); }} className="admin-role-dropdown"><option value="user">user</option><option value="admin" disabled={row.isActive === false}>admin</option></select></td><td data-label="Joined">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td></tr>;
-          return <tr key={id}><td data-label="Review"><strong>{row.comment || row.text || '—'}</strong><small className="admin-cell-detail">{row.package?.title || 'Journey'}</small></td><td data-label="Traveller">{adminPersonName(row.user, row.user?.name) || row.name || '—'}</td><td data-label="Rating"><span className="rating"><Star size={13} fill="currentColor"/>{row.rating || '—'}</span></td><td data-label="Actions"><button className="table-action" onClick={() => setConfirmation({ title: 'Delete this review?', description: 'This will remove the review.', confirmLabel: 'Delete review', action: () => deleteReview(id) })}>Delete</button></td></tr>;
+          if (tab === 'packages') return <tr key={id}><td data-label="Journey"><div className="admin-journey-cell"><img src={packageImage(row)} alt=""/><span><strong>{packageTitle(row)}</strong><small className="admin-cell-detail">{row.travelType || 'Journey'} · {row.status || 'active'}</small></span></div></td><td data-label="Destination">{tripPlace(row)}</td><td data-label="Price">{money(tripPrice(row), row.currency || 'USD')}</td><td data-label="Duration">{row.durationDays || row.days || '—'} days</td><td data-label="Actions"><div className="table-actions"><button disabled={saving} onClick={() => editPackage(row)}>Edit</button>{row.status !== 'archived' && <button disabled={saving} onClick={() => setConfirmation({ title: 'Archive this journey?', description: 'It will no longer appear in public listings.', confirmLabel: 'Archive journey', action: () => deletePackage(id) })}>Archive</button>}</div></td></tr>;
+          if (tab === 'departures') {
+            const previous = pageRows[pageRows.indexOf(row) - 1];
+            const day = String(row.startDate || '').slice(0, 10);
+            const occupancy = row.capacity > 0 ? Math.min(100, Math.round((row.bookedSeats || 0) / row.capacity * 100)) : 0;
+            return <Fragment key={id}>{(!previous || String(previous.startDate || '').slice(0, 10) !== day) && <tr className="admin-date-group"><td colSpan={7}><CalendarDays size={14}/> {adminDepartureDate(row.startDate)}</td></tr>}<tr><td data-label="Journey"><div className="admin-journey-cell"><img src={packageImage(row.package || {})} alt=""/><span><strong>{packageTitle(row.package || row)}</strong><small className="admin-cell-detail">{row.package?.country || row.package?.destination}</small></span></div></td><td data-label="Departure ID">{String(id).slice(-8).toUpperCase()}</td><td data-label="Status"><span className={`status-pill status-${row.status || 'scheduled'}`}>{row.status || 'scheduled'}</span></td><td data-label="Date">{adminDepartureDate(row.startDate)}</td><td data-label="Seats">{row.bookedSeats ?? '—'} / {row.capacity ?? '—'}</td><td data-label="Occupancy"><div className="admin-occupancy-cell"><div className="admin-occupancy" role="progressbar" aria-label="Departure occupancy" aria-valuemin={0} aria-valuemax={100} aria-valuenow={occupancy}><span style={{ width: `${occupancy}%` }}/></div><span>{occupancy}%</span></div></td><td data-label="Actions"><DepartureActions row={row} onChanged={() => { notify('Departure updated.'); load(); }} onError={setError}/></td></tr></Fragment>;
+          }
+          if (tab === 'orders') return <tr key={id} className={selectedBookingId === String(id) ? 'admin-row-selected' : ''}><td data-label="Booking reference"><strong>{adminBookingReference(row)}</strong></td><td data-label="Journey">{row.packageSnapshot?.title || 'Journey'}</td><td data-label="Traveller">{adminPersonName(row, row.contact?.name) || adminPersonName(row.user, row.user?.name) || '—'}</td><td data-label="Status"><span className={`status-pill status-${(row.status || 'pending').toLowerCase()}`}>{row.status || 'Pending'}</span>{row.status === 'completed' && <small className="admin-cell-detail">{row.reviewEmailStatus === 'sent' ? 'Review email sent' : row.reviewEmailStatus === 'not_needed' ? 'Already reviewed' : <button className="admin-inline-link" disabled={Boolean(reviewEmailBusy)} onClick={() => retryReviewEmail(id)}>{reviewEmailBusy === id ? 'Sending…' : 'Retry review email'}</button>}</small>}</td><td data-label="Booking value">{money(row.totalMinor == null ? null : row.totalMinor / 100, row.currency || 'CAD')}</td><td data-label="Details"><button type="button" className="admin-icon-button" aria-label={`View ${adminBookingReference(row)}`} onClick={() => setSelectedBooking(String(id))}><Info size={17}/></button></td></tr>;
+          if (tab === 'users') return <tr key={id} className={selectedUserId === String(id) ? 'admin-row-selected' : ''}><td data-label="Name"><div className="admin-person"><span className="admin-person-avatar">{(adminPersonName(row, row.name) || 'T').charAt(0).toUpperCase()}</span><button type="button" className="admin-name-button" onClick={() => setSelectedUser(String(id))}>{adminPersonName(row, row.name) || '—'}</button></div></td><td data-label="Email">{row.email || '—'}</td><td data-label="Role"><span className="admin-role-label">{row.role === 'admin' ? 'Administrator' : 'Traveller'}</span></td><td data-label="Joined">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td></tr>;
+          return null;
         })}</tbody></table></div>}
+        {selectedBooking && <aside className="admin-booking-detail" aria-label="Booking quick view"><div className="admin-overview-card-heading"><h3>Booking {adminBookingReference(selectedBooking)}</h3><button type="button" onClick={() => setSelectedBooking(null)} aria-label="Close booking details"><X size={18}/></button></div><img className="admin-booking-image" src={packageImage({ destination: selectedBooking.packageSnapshot?.destination })} alt=""/><h3 className="admin-booking-journey">{selectedBooking.packageSnapshot?.title || 'Journey'}</h3><span className={`status-pill status-${(selectedBooking.status || 'pending').toLowerCase()}`}>{selectedBooking.status || 'Pending'}</span><dl><div><dt><UserRound size={15}/> Traveller</dt><dd>{adminPersonName(selectedBooking, selectedBooking.contact?.name) || '—'}</dd></div><div><dt><CalendarDays size={15}/> Departure</dt><dd>{adminDepartureDate(selectedBooking.startDate)}</dd></div><div><dt><Tag size={15}/> Booking value</dt><dd>{money(selectedBooking.totalMinor == null ? null : selectedBooking.totalMinor / 100, selectedBooking.currency || 'CAD')}</dd></div></dl>{selectedBooking.paymentMode === 'demo' && !selectedBooking.amountPaidMinor && <div className="admin-no-payment"><CircleAlert size={18}/> No payment collected</div>}{selectedBooking.status === 'confirmed' && <button className="button button-dark admin-complete-button" onClick={() => setConfirmation({ title: 'Complete this booking?', description: 'The booking will be marked completed and a review request will be sent to its contact email unless the journey was already reviewed.', confirmLabel: 'Mark completed', action: () => completeOrder(itemId(selectedBooking)) })}><Check size={17}/> Mark completed</button>}<Link className="button button-outline admin-booking-link" to={`/admin/orders/${itemId(selectedBooking)}`}>Open booking details</Link></aside>}
+        {selectedUser && <AdminTravellerDetail key={itemId(selectedUser)} row={selectedUser} currentUserId={itemId(user)} saving={savingUser} onSave={saveTraveller} onClose={() => setSelectedUser(null)}/>}
+        </div>
+        {visibleRows.length > pageSize && <div className="admin-pagination"><span>Showing {(Math.min(listPage, pageCount) - 1) * pageSize + 1}–{Math.min(Math.min(listPage, pageCount) * pageSize, visibleRows.length)} of {visibleRows.length} loaded records</span><div><button type="button" disabled={Math.min(listPage, pageCount) <= 1} onClick={() => setListPage(Math.min(listPage, pageCount) - 1)}>Previous</button>{Array.from({ length: Math.min(pageCount, 5) }, (_, index) => Math.max(1, Math.min(Math.min(listPage, pageCount) - 2, pageCount - 4)) + index).map((page) => <button key={page} type="button" aria-current={page === Math.min(listPage, pageCount) ? 'page' : undefined} onClick={() => setListPage(page)}>{page}</button>)}<button type="button" disabled={Math.min(listPage, pageCount) >= pageCount} onClick={() => setListPage(Math.min(listPage, pageCount) + 1)}>Next</button></div></div>}
       </section>}
-    </motion.div></div>
+    </motion.div></div></div>
     {notices.length > 0 && <div className="admin-toast-stack" aria-label="Admin notifications">{notices.map(({ id, message }) => <SwipeToast key={id} title={message} icon={<Check size={18}/>} background="#244e42" color="#f5fff8" fuseColor="#a5dfbd" radius={14} duration={6000} closeButton inline onClose={() => setNotices((current) => current.filter((notice) => notice.id !== id))}/>)}</div>}
     {confirmation && <ConfirmDialog {...confirmation} onClose={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.action; setConfirmation(null); action(); }}/>}
   </main>;
 }
 
-function DepartureCreate({ onCreated }) {
-  const [open, setOpen] = useState(false);
+function DepartureCreate({ onCreated, onClose }) {
   const [packages, setPackages] = useState([]);
   const [form, setForm] = useState({ package: '', startDate: '', endDate: '', capacity: 10, price: '', currency: 'CAD' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const durationDays = form.startDate && form.endDate ? Math.max(0, Math.ceil((new Date(form.endDate) - new Date(form.startDate)) / (1000 * 60 * 60 * 24))) : 0;
   const totalRevenue = Number(form.capacity) * Number(form.price) || 0;
-  useEffect(() => { if (open) endpoints.adminPackages().then(({ data }) => setPackages(records(data))).catch((e) => setError(errorMessage(e))); }, [open]);
+  useEffect(() => { endpoints.adminPackages().then(({ data }) => setPackages(records(data))).catch((e) => setError(errorMessage(e))); }, []);
   const submit = async (e) => {
     e.preventDefault();
     if (saving) return;
     setSaving(true);
     try { 
       await endpoints.createDeparture({ package: form.package, startDate: form.startDate, endDate: form.endDate, capacity: Number(form.capacity), pricePerPersonMinor: Math.round(Number(form.price) * 100), currency: form.currency }); 
-      setOpen(false); 
       setForm({ package: '', startDate: '', endDate: '', capacity: 10, price: '', currency: 'CAD' });
       onCreated(); 
     }
     catch (e2) { setError(errorMessage(e2)); }
     finally { setSaving(false); }
   };
-  return <><button className="button button-dark" disabled={saving} onClick={() => setOpen((x) => !x)}><Plus size={15}/> Add departure</button>{open && <form className="admin-edit-form departure-form-create" onSubmit={submit}>
+  return <form className="admin-edit-form departure-form-create" onSubmit={submit}>
     <div className="departure-form-header">
       <h3>Create New Departure</h3>
       <p>Add a new departure date, capacity, and pricing for a journey</p>
@@ -1297,10 +1560,10 @@ function DepartureCreate({ onCreated }) {
     </div>}
     {error && <Alert>{error}</Alert>}
     <div className="departure-form-actions">
-      <button className="button button-outline" type="button" onClick={() => setOpen(false)} disabled={saving}>Cancel</button>
+      <button className="button button-outline" type="button" onClick={onClose} disabled={saving}>Cancel</button>
       <button className="button button-dark" type="submit" disabled={saving}>{saving ? 'Creating...' : 'Create Departure'}</button>
     </div>
-  </form>}</>;
+  </form>;
 }
 
 function DepartureActions({ row, onChanged, onError }) {
@@ -1386,6 +1649,8 @@ export default function App() {
   const [night, setNight] = useState(false);
   const [cancelBooking, setCancelBooking] = useState(null);
   const [cancellationRevision, setCancellationRevision] = useState(0);
+  const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem('roamora_welcome_seen') !== '1');
+  const dismissWelcome = () => { localStorage.setItem('roamora_welcome_seen', '1'); setShowWelcome(false); };
   const previousPath = useRef(pathname);
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = night ? 'night' : 'day';
@@ -1403,9 +1668,12 @@ export default function App() {
     <Route path="/login" element={<AuthPage mode="login"/>}/><Route path="/register" element={<AuthPage mode="register"/>}/>
     <Route path="/compare" element={<Compare/>}/><Route path="/travo" element={<Travo/>}/><Route path="/book/:id" element={<Protected><Booking/></Protected>}/><Route path="/booking/confirmation/:id" element={<Protected><Confirmation/></Protected>}/><Route path="/review/:id" element={<Protected><ReviewPage/></Protected>}/>
     <Route path="/dashboard" element={<Protected><Dashboard onRequestCancel={setCancelBooking} cancellationRevision={cancellationRevision}/></Protected>}/>
-    <Route path="/admin" element={<Protected admin><AdminLayout night={night} onToggleTheme={() => setNight((value) => !value)}><Admin/></AdminLayout></Protected>}/>
+    <Route path="/admin/:section?" element={<Protected admin><Admin night={night} onToggleTheme={() => setNight((value) => !value)}/></Protected>}/>
     <Route path="/admin/orders/:id" element={<Protected admin><AdminLayout night={night} onToggleTheme={() => setNight((value) => !value)}><Confirmation admin/></AdminLayout></Protected>}/>
     <Route path="*" element={<NotFound/>}/>
   </Routes>;
-  return <>{pathname === '/admin' || pathname.startsWith('/admin/') ? routes : <ClickSpark className="app-shell" targetSelector="[data-click-spark], .site-header a, .site-header button" sparkColor={night ? ['#83b5aa', '#d6e8e1', '#ffffff'] : ['#47766c', '#d2a36f', '#ffffff']} sparkSize={12} sparkRadius={28} duration={500} glow={0.35} ring><SpecularControls/><Header night={night} onToggleTheme={() => setNight((value) => !value)}/>{pathname === '/' ? routes : <FadeContent key={pathname} className="route-content" effect="focus" duration={0.6} trigger="mount">{routes}</FadeContent>}<Footer/>{cancelBooking && <CancelBookingModal booking={cancelBooking} onClose={() => setCancelBooking(null)} onRefresh={() => setCancellationRevision((value) => value + 1)}/>}{pathname !== '/travo' && <TravoBubble/>}</ClickSpark>}<ReviewReminder user={user} loginRevision={loginRevision} pathname={pathname}/></>;
+  return <>{pathname === '/admin' || pathname.startsWith('/admin/') ? routes : <ClickSpark className="app-shell" targetSelector="[data-click-spark], .site-header a, .site-header button" sparkColor={night ? ['#83b5aa', '#d6e8e1', '#ffffff'] : ['#47766c', '#d2a36f', '#ffffff']} sparkSize={12} sparkRadius={28} duration={500} glow={0.35} ring><SpecularControls/><Header night={night} onToggleTheme={() => setNight((value) => !value)}/>{pathname === '/' ? routes : <FadeContent key={pathname} className="route-content" effect="focus" duration={0.6} trigger="mount">{routes}</FadeContent>}<Footer/>{cancelBooking && <CancelBookingModal booking={cancelBooking} onClose={() => setCancelBooking(null)} onRefresh={() => setCancellationRevision((value) => value + 1)}/>}{pathname !== '/travo' && <TravoBubble/>}</ClickSpark>}{!showWelcome && <ReviewReminder user={user} loginRevision={loginRevision} pathname={pathname}/>} {showWelcome && <ConfirmDialog title="Welcome to Roamora." description="Explore the project and its journeys. To access the admin panel, sign in with :
+     \n Email: Admin@gmail.com \n
+    Password: Admin$1111
+     Payments are not collected on this website." confirmLabel="Explore Roamora" hideCancel onConfirm={dismissWelcome} onClose={dismissWelcome}/>}</>;
 }

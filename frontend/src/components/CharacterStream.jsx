@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 
 export function CharacterStream({ text, duration = 0.5, onComplete }) {
   const [displayedText, setDisplayedText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
+  const completion = useRef(onComplete);
+  completion.current = onComplete;
 
   useEffect(() => {
     if (!text) return;
@@ -11,6 +13,7 @@ export function CharacterStream({ text, duration = 0.5, onComplete }) {
     const totalChars = text.length;
     const startTime = performance.now();
 
+    let frame;
     const updateDisplay = (currentTime) => {
       const elapsed = currentTime - startTime;
       const durationMs = duration * 1000;
@@ -20,15 +23,16 @@ export function CharacterStream({ text, duration = 0.5, onComplete }) {
       if (charsToShow === totalChars) {
         setDisplayedText(text);
         setIsComplete(true);
-        onComplete?.();
+        completion.current?.();
       } else {
         setDisplayedText(text.slice(0, charsToShow));
-        requestAnimationFrame(updateDisplay);
+        frame = requestAnimationFrame(updateDisplay);
       }
     };
 
-    requestAnimationFrame(updateDisplay);
-  }, [text, duration, onComplete]);
+    frame = requestAnimationFrame(updateDisplay);
+    return () => cancelAnimationFrame(frame);
+  }, [text, duration]);
 
   return (
     <motion.span

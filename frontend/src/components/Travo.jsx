@@ -61,6 +61,7 @@ export default function Travo() {
     try {
       const { data } = await endpoints.chat({ messages: requestMessages }, { signal: request.signal });
       if (controller.current !== request) return;
+      setStreamingIndex(next.length);
       setMessages((current) => [...current, { role: 'model', text: data.reply, elapsed: (performance.now() - start) / 1000 }]);
     } catch (err) {
       if (controller.current !== request) return;
@@ -98,7 +99,7 @@ export default function Travo() {
           {message.role === 'model' && <img className="travo-avatar" src={travoLogo} alt=""/>}
           <div className={`travo-message ${message.role === 'user' ? 'travo-user' : 'travo-assistant'}`}><strong>{message.role === 'user' ? 'YOU' : 'TRAVO'}</strong>
             {message.role === 'model' && <ThoughtLine elapsed={message.elapsed}/>}
-            <p>{message.role === 'model' && index === messages.length - 1 && !pending ? <CharacterStream text={message.text} duration={message.text.length * 0.02} onComplete={() => setStreamingIndex(null)}/> : <MessageText text={message.text}/>}</p></div></div>)}
+            <p>{message.role === 'model' && index === streamingIndex ? <CharacterStream text={message.text} duration={message.text.length * 0.02} onComplete={() => setStreamingIndex(null)}/> : <MessageText text={message.text}/>}</p></div></div>)}
         {pending && <div className="travo-message-row"><img className="travo-avatar" src={travoLogo} alt=""/><div className="travo-message travo-assistant"><ThoughtLine startedAt={startedAt}/></div></div>}
       </div>
       {!messages.length && <div className="travo-starters" aria-label="Conversation starters"><span>NEED A LITTLE INSPIRATION?</span><div>{starters.map(({ icon: Icon, label, prompt }) => <button key={label} type="button" disabled={pending} onClick={() => { setDraft(prompt); setError(''); promptInput.current?.focus(); }}><Icon size={15}/><span>{label}</span><ArrowRight size={14}/></button>)}</div></div>}

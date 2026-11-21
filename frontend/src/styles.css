@@ -294,7 +294,6 @@ img { display: block; max-width: 100%; }
 .status-pill { display: inline-block; text-transform: capitalize; padding: 6px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; border: 1px solid transparent; transition: all .2s ease; }
 
 /* Status colors - Admin panel optimized */
-.status-pill.status-confirmed,
 .status-pill.status-active { 
   color: #1f5b35; 
   background: #d4f4d8; 
@@ -302,6 +301,13 @@ img { display: block; max-width: 100%; }
   box-shadow: 0 2px 8px rgba(31, 91, 53, .12);
 }
 
+.status-pill.status-confirmed {
+  color: #174b84;
+  background: #dcecff;
+  border-color: #9dc4ef;
+}
+
+.status-pill.status-complete,
 .status-pill.status-completed { 
   color: #1f5b35; 
   background: #d4f4d8; 
@@ -323,7 +329,8 @@ img { display: block; max-width: 100%; }
   box-shadow: 0 2px 8px rgba(124, 86, 32, .12);
 }
 
-.status-pill.status-cancelled { 
+.status-pill.status-cancelled,
+.status-pill.status-canceled {
   color: #8b2e1f; 
   background: #ffd8d8; 
   border-color: #f4b0a0;
@@ -1040,12 +1047,17 @@ html[data-theme="night"] :is(.journey-carousel-controls button, .gallery-paginat
 html[data-theme="night"] :is(.journey-carousel-controls button, .gallery-pagination button, .destination-guide-picker button):hover,
 html[data-theme="night"] .destination-guide-picker button[aria-pressed="true"] { background: #83b5aa; color: #0b151c; }
 html[data-theme="night"] :is(.journey-spotlight-top span:last-child, .avatar, .dashboard-avatar, .empty-icon, .finder-compass, .form-section-heading > span, .confirmation-icon, .admin-badge) { color: #edf5ef; background: #2a454b; border-color: #547177; }
-html[data-theme="night"] .status-pill.status-confirmed,
 html[data-theme="night"] .status-pill.status-active,
+html[data-theme="night"] .status-pill.status-complete,
 html[data-theme="night"] .status-pill.status-completed { 
   color: #a3d6c1; 
   background: #1b4d35; 
   border-color: #2d7a5c;
+}
+html[data-theme="night"] .status-pill.status-confirmed {
+  color: #b6d8ff;
+  background: #1d3858;
+  border-color: #517eae;
 }
 html[data-theme="night"] .status-pill.status-pending,
 html[data-theme="night"] .status-pill.status-scheduled { 
@@ -1054,6 +1066,7 @@ html[data-theme="night"] .status-pill.status-scheduled {
   border-color: #7a5c35;
 }
 html[data-theme="night"] .status-pill.status-cancelled,
+html[data-theme="night"] .status-pill.status-canceled,
 html[data-theme="night"] .status-pill.status-failed { 
   color: #f5b0a0; 
   background: #5c2a1f; 

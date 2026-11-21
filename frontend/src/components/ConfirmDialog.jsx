@@ -4,7 +4,7 @@ import { ShieldCheck, X } from 'lucide-react';
 import { popupOverlayMotion, popupPanelMotion } from './popupMotion.js';
 import './PasswordResetModal.css';
 
-export default function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose }) {
+export default function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose, hideCancel = false }) {
   const dialog = useRef(null);
   const confirmed = useRef(false);
   const id = useId();
@@ -14,12 +14,12 @@ export default function ConfirmDialog({ title, description, confirmLabel, onConf
     const previous = document.activeElement;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    dialog.current?.querySelector('.confirm-dialog-cancel')?.focus();
+    dialog.current?.querySelector(hideCancel ? '.confirm-dialog-confirm' : '.confirm-dialog-cancel')?.focus();
     return () => {
       document.body.style.overflow = overflow;
       if (previous?.isConnected) previous.focus();
     };
-  }, []);
+  }, [hideCancel]);
 
   const keyDown = (event) => {
     if (event.key === 'Escape') { event.preventDefault(); onClose(); return; }
@@ -49,8 +49,8 @@ export default function ConfirmDialog({ title, description, confirmLabel, onConf
       <h2 id={`${id}-title`}>{title}</h2>
       <p id={`${id}-description`} className="reset-description">{description}</p>
       <div className="confirm-dialog-actions">
-        <button type="button" className="button button-outline confirm-dialog-cancel" onClick={onClose}>Cancel</button>
-        <button type="button" className="button button-dark" onClick={confirm}>{confirmLabel}</button>
+        {!hideCancel && <button type="button" className="button button-outline confirm-dialog-cancel" onClick={onClose}>Cancel</button>}
+        <button type="button" className="button button-dark confirm-dialog-confirm" onClick={confirm}>{confirmLabel}</button>
       </div>
     </motion.div>
   </motion.div>;

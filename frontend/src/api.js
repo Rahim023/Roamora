@@ -24,6 +24,7 @@ export function errorMessage(error, fallback = 'Something went wrong. Please try
 
 export const endpoints = {
   health: () => api.get('/health'),
+  siteContent: () => api.get('/site-content'),
   register: (body) => api.post('/auth/register', body),
   login: (body) => api.post('/auth/login', body),
   requestPasswordReset: (body) => api.post('/auth/password-reset/request', body),
@@ -54,7 +55,7 @@ export const endpoints = {
   deleteItinerary: (id) => api.delete(`/itineraries/${id}`),
   planItinerary: (body) => api.post('/itineraries/plan', body),
   chat: (body, config) => api.post('/travo', body, config),
-  analytics: () => api.get('/admin/analytics'),
+  analytics: (params) => api.get('/admin/analytics', { params }),
   adminPackages: () => api.get('/admin/packages'),
   adminDepartures: () => api.get('/admin/departures'),
   adminOrders: () => api.get('/admin/orders'),
@@ -63,6 +64,7 @@ export const endpoints = {
   completeOrder: (id) => api.patch(`/admin/orders/${id}/complete`),
   retryReviewEmail: (id) => api.post(`/admin/orders/${id}/review-email/retry`),
   promoteUser: (id) => api.patch(`/admin/users/${id}/promote`),
+  updateAdminUser: (id, body) => api.patch(`/admin/users/${id}`, body),
   uploadPackageImage: (file) => {
     const body = new FormData();
     body.append('image', file);
