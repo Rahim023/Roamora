@@ -14,9 +14,11 @@ Set the rotated MongoDB URI in `backend/.env` without posting it in chat or comm
 Run model tests with `npm test`, start the API with `npm run dev`, and check `http://localhost:5000/api/health`.
 Set `ADMIN_EMAIL`, `ADMIN_PASSWORD` (12+ characters), and optionally `ADMIN_NAME` in `.env`, then run `npm run admin:bootstrap` to provision an administrator. This command updates only the matching admin account or creates it; it does not print the password.
 
-The booking endpoints require MongoDB replica-set transaction support (MongoDB Atlas supports this). Confirmation emails are recorded as `not_sent_demo` when SMTP is not configured. Payment is explicitly demo-only; no real charge is made.
+The booking endpoints require MongoDB replica-set transaction support (MongoDB Atlas supports this). Confirmation emails are recorded as `not_sent_demo` when SMTP is not configured. The website does not collect or transfer money; new bookings start with no payment recorded.
 
-Administrators can promote active users and mark confirmed bookings completed. Completion makes the booking eligible for its owner's trip review; cancelled and pending bookings cannot be completed. Administrators can view booking details without changing payment records.
+Administrators can promote active users and mark confirmed bookings completed. Completion makes the booking eligible for its owner's trip review; cancelled and pending bookings cannot be completed.
+
+Administrators can edit account names, email addresses, roles and active status in the traveller panel. They cannot demote or deactivate their own account, and inactive administrators must be demoted before deactivation. Email, role and status changes invalidate existing sessions; an email change also clears pending password resets. Account edits use a MongoDB transaction and reject stale edits, so a replica set is required.
 
 On completion, an email invites the booking contact to review the journey using a sign-in-protected booking link. SMTP must be configured for delivery; completion remains saved if SMTP is missing or fails, and the admin booking list shows the delivery state and offers a retry. A pending attempt can be retried after five minutes. No email is sent when the account has already reviewed that journey. One review per account and journey is permitted. On sign-in, travellers are reminded of completed journeys they have not reviewed; dismissing the reminder leaves them eligible at their next sign-in.
 
@@ -24,7 +26,11 @@ The admin workspace has a separate interface at `/admin`. Every `/api/admin/*` e
 
 For journey image uploads, configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in the backend environment, never in the frontend or source control. The admin journey form accepts JPEG, PNG or WebP up to 5 MB; saving uploads the image to Cloudinary and stores its secure URL with the package. Upload and package saving are separate operations, so an upload can remain in Cloudinary if package saving is abandoned.
 
-The admin overview includes all customer accounts, active catalogue entries, and confirmed or completed bookings in its counts. Financial totals include only recorded external payments, less recorded refunds, separated by currency. Amounts from non-external payments are excluded, and external records are not independently verified with a payment provider.
+The admin overview includes all customer accounts, active catalogue entries, and confirmed or completed bookings in its counts. Booking value charts sum the total value of currently confirmed or completed bookings by creation month in UTC, separately for each currency. This month's expected value uses bookings created during the current UTC calendar month. Cancelled and pending bookings are excluded, and a cancellation removes that booking's value from the charts. These are booking values, not payments received or payment due dates; the website does not collect money. The overview refreshes every 30 seconds.
+
+The booking-value trend shows the last six or twelve UTC calendar months, including zero-value months, with a currency selector when necessary. The overview also shows upcoming scheduled departures and recent bookings. Admin search uses the existing journey, booking, and traveller lists; their API list limits apply.
+
+The admin sections have searchable, filterable lists and show summaries of the loaded records (bookings and reviews are limited to the latest 200, accounts to the latest 500). Departure occupancy uses booked seats and capacity; the departure calendar filters by UTC date. Journey destination and country are edited in the journey form. Homepage destination cards use the existing site content.
 
 In the admin interface, marked records whose booking reference contains the sample label are displayed using the booking ID instead; similarly labelled names are shown as “Traveller.” Stored references and names are unchanged.
 

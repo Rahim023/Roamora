@@ -77,8 +77,9 @@ describe('booking service', () => {
       subtotalMinor: 250000,
       feesMinor: 0,
       totalMinor: 250000,
-      amountPaidMinor: 250000,
+      amountPaidMinor: 0,
       paymentMode: 'demo',
+      paymentStatus: 'pending',
     });
     expect(inventoryUpdate).toHaveBeenCalledOnce();
   });
@@ -138,4 +139,5 @@ describe('booking service', () => {
     expect(current.refundedMinor).toBe(250000);
     expect(inventoryUpdate).toHaveBeenCalledOnce();
   });
+
 });

@@ -5,7 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import app from '../app.js';
-import { Departure, Order, Package, Review, User } from '../models/index.js';
+import { Departure, Order, Package, Review, SiteContent, User } from '../models/index.js';
 
 const adminId = new mongoose.Types.ObjectId();
 const targetId = new mongoose.Types.ObjectId();
@@ -27,15 +27,51 @@ describe('admin management', () => {
       ['get', '/analytics'], ['get', '/packages'], ['post', '/packages'], ['patch', `/packages/${targetId}`], ['delete', `/packages/${targetId}`],
       ['post', '/uploads/package-image'], ['get', '/departures'], ['post', '/departures'], ['patch', `/departures/${targetId}`],
       ['get', '/orders'], ['patch', `/orders/${targetId}/complete`], ['post', `/orders/${targetId}/email/retry`], ['post', `/orders/${targetId}/review-email/retry`],
-      ['get', '/users'], ['patch', `/users/${targetId}/promote`], ['get', '/reviews'], ['delete', `/reviews/${targetId}`],
+      ['get', '/users'], ['patch', `/users/${targetId}/promote`], ['patch', `/users/${targetId}`], ['get', '/reviews'], ['delete', `/reviews/${targetId}`],
       ['get', '/activities'], ['post', '/activities'], ['patch', `/activities/${targetId}`], ['delete', `/activities/${targetId}`],
-      ['patch', '/site-content'], ['get', '/future-route'],
+      ['patch', '/site-content'], ['patch', '/site-content/destinations'], ['get', '/future-route'],
     ];
     for (const [method, suffix] of paths) {
       const path = `/api/admin${suffix}`;
       expect((await request(app)[method](path)).status).toBe(401);
       expect((await request(app)[method](path).set('Authorization', `Bearer ${forgedRoleToken}`)).status).toBe(403);
     }
+  });
+
+  it('updates homepage destinations only when the loaded revision is current', async () => {
+    authenticate();
+    const existing = { _id: targetId, __v: 2, hero: { heading: 'Keep me' }, destinations: [] };
+    vi.spyOn(SiteContent, 'findOne').mockReturnValue({ lean: async () => existing });
+    const update = vi.spyOn(SiteContent, 'findOneAndUpdate').mockResolvedValueOnce({ ...existing, __v: 3 }).mockResolvedValueOnce(null);
+    const body = { destinations: [{ name: 'Kyoto', country: 'Japan' }], version: { id: String(targetId), revision: 2 } };
+    const url = '/api/admin/site-content/destinations';
+    expect((await request(app).patch(url).set('Authorization', authorization()).send(body)).status).toBe(200);
+    expect(update).toHaveBeenCalledWith(
+      { _id: targetId, __v: 2 }, { $set: { destinations: body.destinations }, $inc: { __v: 1 } }, { new: true, runValidators: true },
+    );
+    expect((await request(app).patch(url).set('Authorization', authorization()).send(body)).status).toBe(409);
+  });
+
+  it('creates homepage content with a hero when none exists', async () => {
+    authenticate();
+    vi.spyOn(SiteContent, 'findOne').mockReturnValue({ lean: async () => null });
+    const create = vi.spyOn(SiteContent, 'create').mockImplementation(async (input) => input);
+    const response = await request(app).patch('/api/admin/site-content/destinations').set('Authorization', authorization())
+      .send({ destinations: [{ name: 'Banff' }], version: null });
+    expect(response.status).toBe(200);
+    expect(create).toHaveBeenCalledWith({ key: 'homepage', hero: {}, destinations: [{ name: 'Banff' }] });
+  });
+
+  it('rejects a stale homepage identity and accepts an unversioned legacy record once', async () => {
+    authenticate();
+    vi.spyOn(SiteContent, 'findOne').mockReturnValue({ lean: async () => ({ _id: targetId }) });
+    const update = vi.spyOn(SiteContent, 'findOneAndUpdate').mockResolvedValue({ _id: targetId, __v: 1 });
+    const url = '/api/admin/site-content/destinations';
+    const destinations = [{ name: 'Banff', country: null, package: null }];
+    expect((await request(app).patch(url).set('Authorization', authorization()).send({ destinations, version: null })).status).toBe(409);
+    expect(update).not.toHaveBeenCalled();
+    expect((await request(app).patch(url).set('Authorization', authorization()).send({ destinations, version: { id: String(targetId), revision: null } })).status).toBe(200);
+    expect(update.mock.calls[0][0]).toEqual({ _id: targetId, __v: { $exists: false } });
   });
 
   it('promotes only an active user and rejects an unavailable target', async () => {
@@ -49,6 +85,43 @@ describe('admin management', () => {
       { $set: { role: 'admin' } }, { new: true, runValidators: true },
     );
     expect((await request(app).patch(url).set('Authorization', authorization())).status).toBe(409);
+  });
+
+  it('updates account details and invalidates sessions on security changes', async () => {
+    authenticate();
+    const updatedAt = new Date('2026-01-01T00:00:00.000Z');
+    const target = { _id: targetId, name: 'Before', email: 'old@example.com', role: 'user', isActive: true, tokenVersion: 2, updatedAt,
+      set: vi.fn(function (key, value) { if (typeof key === 'string') this[key] = value; else Object.assign(this, key); }),
+      save: vi.fn().mockResolvedValue(undefined) };
+    User.findById.mockImplementation((id) => String(id) === String(adminId)
+      ? { select: async () => ({ _id: adminId, role: 'admin', isActive: true }) }
+      : { session: async () => target });
+    const session = { withTransaction: async (callback) => callback(), endSession: vi.fn() };
+    vi.spyOn(mongoose, 'startSession').mockResolvedValue(session);
+    const lock = vi.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ _id: adminId });
+    const response = await request(app).patch(`/api/admin/users/${targetId}`).set('Authorization', authorization()).send({
+      name: 'After', email: 'NEW@example.com', role: 'admin', isActive: true, updatedAt: updatedAt.toISOString(),
+    });
+    expect(response.status).toBe(200);
+    expect(target).toMatchObject({ name: 'After', email: 'new@example.com', role: 'admin', tokenVersion: 3 });
+    expect(target.set).toHaveBeenCalledWith('passwordReset', undefined);
+    expect(lock).toHaveBeenCalledWith({ _id: adminId, role: 'admin', isActive: true }, { $inc: { __v: 1 } }, { new: true, session, timestamps: false });
+    expect(session.endSession).toHaveBeenCalled();
+  });
+
+  it('rejects self-demotion and stale account edits', async () => {
+    authenticate();
+    const body = { name: 'Admin', email: 'admin@example.com', role: 'user', isActive: true, updatedAt: '2026-01-01T00:00:00.000Z' };
+    expect((await request(app).patch(`/api/admin/users/${String(adminId).toUpperCase()}`).set('Authorization', authorization()).send(body)).status).toBe(409);
+    const target = { updatedAt: new Date('2026-01-02T00:00:00.000Z') };
+    User.findById.mockImplementation((id) => String(id) === String(adminId)
+      ? { select: async () => ({ _id: adminId, role: 'admin', isActive: true }) }
+      : { session: async () => target });
+    const session = { withTransaction: async (callback) => callback(), endSession: vi.fn() };
+    vi.spyOn(mongoose, 'startSession').mockResolvedValue(session);
+    vi.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ _id: adminId });
+    expect((await request(app).patch(`/api/admin/users/${targetId}`).set('Authorization', authorization()).send(body)).status).toBe(409);
+    expect(session.endSession).toHaveBeenCalled();
   });
 
   it('rejects a token when the administrator account is inactive', async () => {
@@ -127,7 +200,7 @@ describe('admin management', () => {
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ images: [image] }));
   });
 
-  it('excludes demo payments and separates external totals by currency', async () => {
+  it('reports booking values by currency and booking month without treating them as payments', async () => {
     authenticate();
     const countUsers = vi.spyOn(User, 'countDocuments').mockResolvedValue(1);
     const countPackages = vi.spyOn(Package, 'countDocuments').mockResolvedValue(2);
@@ -135,20 +208,34 @@ describe('admin management', () => {
       .mockResolvedValueOnce([{ total: 3 }])
       .mockResolvedValueOnce([{ paid: [{ _id: 'CAD', amount: 10000 }, { _id: 'USD', amount: 5000 }], refunded: [{ _id: 'CAD', amount: 2000 }] }])
       .mockResolvedValueOnce([{ paid: [], refunded: [] }])
+      .mockResolvedValueOnce([{ _id: 'CAD', amount: 12000 }, { _id: 'USD', amount: 8000 }])
+      .mockResolvedValueOnce([{ _id: { period: '2026-03', currency: 'CAD' }, amount: 12000 }, { _id: { period: '2026-03', currency: 'USD' }, amount: 8000 }])
+      .mockResolvedValueOnce([{ _id: 'CAD', amount: 12000 }])
       .mockResolvedValueOnce([]);
     vi.spyOn(User, 'aggregate').mockResolvedValue([]);
     vi.spyOn(Order, 'find').mockReturnValue({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) });
-    vi.spyOn(Departure, 'find').mockReturnValue({ sort: () => ({ limit: () => ({ populate: () => ({ lean: async () => [] }) }) }) });
+    const findDepartures = vi.spyOn(Departure, 'find').mockReturnValue({ sort: () => ({ limit: () => ({ populate: () => ({ lean: async () => [] }) }) }) });
     const response = await request(app).get('/api/admin/analytics').set('Authorization', authorization());
     expect(response.status).toBe(200);
     expect(response.body.metrics).toMatchObject({ confirmedBookings: 3, netExternalPayments: [{ currency: 'CAD', netMinor: 8000 }, { currency: 'USD', netMinor: 5000 }] });
+    expect(response.body.metrics.expectedThisMonth).toEqual([{ currency: 'CAD', amountMinor: 12000 }]);
+    expect(response.body.metrics.bookingValue).toEqual([{ currency: 'CAD', amountMinor: 12000 }, { currency: 'USD', amountMinor: 8000 }]);
+    expect(response.body.bookingValueByPeriod).toEqual([{ period: '2026-03', currency: 'CAD', amountMinor: 12000 }, { period: '2026-03', currency: 'USD', amountMinor: 8000 }]);
     expect(countUsers).toHaveBeenCalledWith({ role: 'user' });
     expect(countPackages).toHaveBeenCalledWith({ status: 'active' });
+    expect(findDepartures).toHaveBeenCalledWith({ status: 'scheduled', startDate: { $gte: expect.any(Date) } });
     expect(orderAggregate.mock.calls[0][0]).toEqual([
       { $match: { status: { $in: ['confirmed', 'completed'] } } },
       { $count: 'total' },
     ]);
-    expect(orderAggregate.mock.calls[1][0][0].$facet.paid[0].$match.paymentMode).toBe('external');
-    expect(orderAggregate.mock.calls[1][0][0].$facet.refunded[0].$match.paymentMode).toBe('external');
+    for (const index of [3, 4, 5]) {
+      expect(orderAggregate.mock.calls[index][0][0].$match.status.$in).toEqual(['confirmed', 'completed']);
+      expect(orderAggregate.mock.calls[index][0][1].$group.amount).toEqual({ $sum: '$totalMinor' });
+    }
+    expect(orderAggregate.mock.calls[4][0][1].$group._id).toEqual({ period: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }, currency: '$currency' });
+    const monthRange = orderAggregate.mock.calls[5][0][0].$match.createdAt;
+    expect(monthRange.$gte.getUTCDate()).toBe(1);
+    expect(monthRange.$lt.getUTCDate()).toBe(1);
+    expect(monthRange.$lt.getTime()).toBeGreaterThan(monthRange.$gte.getTime());
   });
 });
