@@ -1672,8 +1672,21 @@ export default function App() {
     <Route path="/admin/orders/:id" element={<Protected admin><AdminLayout night={night} onToggleTheme={() => setNight((value) => !value)}><Confirmation admin/></AdminLayout></Protected>}/>
     <Route path="*" element={<NotFound/>}/>
   </Routes>;
-  return <>{pathname === '/admin' || pathname.startsWith('/admin/') ? routes : <ClickSpark className="app-shell" targetSelector="[data-click-spark], .site-header a, .site-header button" sparkColor={night ? ['#83b5aa', '#d6e8e1', '#ffffff'] : ['#47766c', '#d2a36f', '#ffffff']} sparkSize={12} sparkRadius={28} duration={500} glow={0.35} ring><SpecularControls/><Header night={night} onToggleTheme={() => setNight((value) => !value)}/>{pathname === '/' ? routes : <FadeContent key={pathname} className="route-content" effect="focus" duration={0.6} trigger="mount">{routes}</FadeContent>}<Footer/>{cancelBooking && <CancelBookingModal booking={cancelBooking} onClose={() => setCancelBooking(null)} onRefresh={() => setCancellationRevision((value) => value + 1)}/>}{pathname !== '/travo' && <TravoBubble/>}</ClickSpark>}{!showWelcome && <ReviewReminder user={user} loginRevision={loginRevision} pathname={pathname}/>} {showWelcome && <ConfirmDialog title="Welcome to Roamora." description="Explore the project and its journeys. To access the admin panel, sign in with :
-     \n Email: Admin@gmail.com \n
-    Password: Admin$1111
-     Payments are not collected on this website." confirmLabel="Explore Roamora" hideCancel onConfirm={dismissWelcome} onClose={dismissWelcome}/>}</>;
+  return <>{pathname === '/admin' || pathname.startsWith('/admin/') ? routes : <ClickSpark className="app-shell" targetSelector="[data-click-spark], .site-header a, .site-header button" sparkColor={night ? ['#83b5aa', '#d6e8e1', '#ffffff'] : ['#47766c', '#d2a36f', '#ffffff']} sparkSize={12} sparkRadius={28} duration={500} glow={0.35} ring><SpecularControls/><Header night={night} onToggleTheme={() => setNight((value) => !value)}/>{pathname === '/' ? routes : <FadeContent key={pathname} className="route-content" effect="focus" duration={0.6} trigger="mount">{routes}</FadeContent>}<Footer/>{cancelBooking && <CancelBookingModal booking={cancelBooking} onClose={() => setCancelBooking(null)} onRefresh={() => setCancellationRevision((value) => value + 1)}/>}{pathname !== '/travo' && <TravoBubble/>}</ClickSpark>}{!showWelcome && <ReviewReminder user={user} loginRevision={loginRevision} pathname={pathname}/>} 
+  {showWelcome && (
+  <ConfirmDialog
+    title="Welcome to Roamora."
+    description={`Explore the project and its journeys.
+
+To access the admin panel, sign in with:
+Email: admin@gmail.com
+Password: Admin$1111
+
+Payments are not collected on this website.`}
+    confirmLabel="Explore Roamora"
+    hideCancel
+    onConfirm={dismissWelcome}
+    onClose={dismissWelcome}
+  />
+)}</>;
 }
