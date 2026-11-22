@@ -18,6 +18,7 @@ describe('booking confirmation email', () => {
     vi.stubEnv('SMTP_HOST', 'localhost');
     vi.stubEnv('SMTP_USER', 'sender@example.com');
     vi.stubEnv('SMTP_PASS', 'test');
+    vi.stubEnv('CLIENT_ORIGIN', 'https://example.test');
     sendMail.mockResolvedValue({});
     const order = {
       _id: 'booking-id',
@@ -40,7 +41,27 @@ describe('booking confirmation email', () => {
     expect(message.html).not.toMatch(/demo/i);
     expect(message.text.includes('No payment was collected')).toBe(showNotice);
     expect(message.html.includes('No payment was collected')).toBe(showNotice);
+    expect(message.text).toContain('https://example.test/booking/confirmation/booking-id');
+    expect(message.html).toContain('https://example.test/booking/confirmation/booking-id');
     expect(order.updateOne).toHaveBeenCalledWith({ $set: { emailStatus: 'sent' } });
+  });
+
+  it('records an SMTP rejection as failed rather than sent', async () => {
+    vi.stubEnv('SMTP_HOST', 'localhost');
+    vi.stubEnv('SMTP_USER', 'sender@example.com');
+    vi.stubEnv('SMTP_PASS', 'test');
+    sendMail.mockResolvedValue({ accepted: [], rejected: ['traveller@example.com'] });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const order = {
+      _id: 'booking-id', bookingReference: 'ROA-123', currency: 'USD', totalMinor: 12000,
+      packageSnapshot: { title: 'Mountain escape' }, startDate: new Date('2027-01-01T00:00:00Z'),
+      travellerCount: 1, status: 'confirmed', paymentMode: 'demo',
+      contact: { email: 'traveller@example.com' }, updateOne: vi.fn().mockResolvedValue({}),
+    };
+    await sendBookingConfirmation(order);
+    expect(order.emailStatus).toBe('failed');
+    expect(order.updateOne).toHaveBeenCalledWith({ $set: { emailStatus: 'failed' } });
+    log.mockRestore();
   });
 
   describe('review request email', () => {
@@ -62,6 +83,7 @@ describe('booking confirmation email', () => {
       expect(booking.updateOne).toHaveBeenCalledWith({ $set: { reviewEmailStatus: 'sent' } });
     });
     it('records missing configuration and SMTP failures without claiming delivery', async () => {
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.stubEnv('SMTP_HOST', '');
       const missing = order();
       expect(await sendReviewRequestEmail(missing)).toBe('not_configured');
@@ -70,10 +92,20 @@ describe('booking confirmation email', () => {
       vi.stubEnv('SMTP_USER', 'sender@example.com');
       vi.stubEnv('SMTP_PASS', 'test');
       sendMail.mockRejectedValue(new Error('unavailable'));
-      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
       const failed = order();
       expect(await sendReviewRequestEmail(failed)).toBe('failed');
       expect(failed.updateOne).toHaveBeenCalledWith({ $set: { reviewEmailStatus: 'failed' } });
+      log.mockRestore();
+    });
+    it('records an SMTP rejection as failed', async () => {
+      vi.stubEnv('SMTP_HOST', 'localhost');
+      vi.stubEnv('SMTP_USER', 'sender@example.com');
+      vi.stubEnv('SMTP_PASS', 'test');
+      sendMail.mockResolvedValue({ accepted: [] });
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const booking = order();
+      expect(await sendReviewRequestEmail(booking)).toBe('failed');
+      expect(booking.updateOne).toHaveBeenCalledWith({ $set: { reviewEmailStatus: 'failed' } });
       log.mockRestore();
     });
   });

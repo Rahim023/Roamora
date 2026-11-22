@@ -6,8 +6,41 @@ import jwt from 'jsonwebtoken';
 import app from '../app.js';
 import { Activity, Departure, Order, Package, Review, User } from '../models/index.js';
 import { loginSchema, registerSchema } from '../validators/schemas.js';
+import * as bookingService from '../services/bookingService.js';
+import * as emailService from '../services/emailService.js';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
+
+describe('booking confirmation', () => {
+  it('returns a confirmed booking without waiting for email and does not resend for a duplicate', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const bookingId = new mongoose.Types.ObjectId();
+    vi.stubEnv('JWT_SECRET', 'test-secret');
+    vi.spyOn(User, 'findById').mockReturnValue({ select: async () => ({ _id: userId, role: 'user', isActive: true }) });
+    const order = { _id: bookingId, status: 'confirmed', emailStatus: 'pending' };
+    vi.spyOn(bookingService, 'createBooking').mockResolvedValueOnce({ order, duplicate: false }).mockResolvedValueOnce({ order, duplicate: true });
+    const send = vi.spyOn(emailService, 'sendBookingConfirmation').mockImplementation(() => new Promise(() => {}));
+    const auth = `Bearer ${jwt.sign({ sub: String(userId) }, 'test-secret')}`;
+    const body = {
+      packageId: String(new mongoose.Types.ObjectId()),
+      departureId: String(new mongoose.Types.ObjectId()),
+      travellerCount: 1,
+      travellers: [{ name: 'Traveller', type: 'adult' }],
+      contact: { name: 'Traveller', email: 'traveller@example.com' },
+      idempotencyKey: 'request-key-0001',
+    };
+    const first = await request(app).post('/api/orders').set('Authorization', auth).send(body).timeout({ response: 3000 });
+    expect(first.status).toBe(201);
+    expect(first.body.order).toMatchObject({ status: 'confirmed', emailStatus: 'pending' });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(send).toHaveBeenCalledTimes(1);
+    const duplicate = await request(app).post('/api/orders').set('Authorization', auth).send(body).timeout({ response: 3000 });
+    expect(duplicate.status).toBe(200);
+    expect(duplicate.body.duplicate).toBe(true);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('activity discovery', () => {
   it('filters exact destinations and currency before applying the catalogue limit', async () => {

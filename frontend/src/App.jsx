@@ -37,7 +37,6 @@ import './components/TravoBubble.css';
 import ClickSpark from './components/ClickSpark.jsx';
 import CircularCarousel from './components/CircularCarousel.jsx';
 import DestinationGuides from './components/DestinationGuides.jsx';
-import { HomepageDestinationCards } from './components/HomepageDestinations.jsx';
 import CometDial from './components/CometDial.jsx';
 import { CompareLayout } from './components/CompareStyles.js';
 import PasswordResetModal from './components/PasswordResetModal.jsx';
@@ -213,22 +212,17 @@ function useWishlist() {
 
 function Landing() {
   const [trips, setTrips] = useState([]);
-  const [destinations, setDestinations] = useState([]);
-  const [destinationError, setDestinationError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   useEffect(() => {
     endpoints.packages({ sort: 'popular', page: 1, limit: 3 }).then(({ data }) => setTrips(records(data).slice(0, 3)))
       .catch((e) => setError(errorMessage(e, 'Trips are taking a moment to load.')))
       .finally(() => setLoading(false));
-    endpoints.siteContent().then(({ data }) => setDestinations(data.content?.destinations || []))
-      .catch((e) => setDestinationError(errorMessage(e, 'Destinations could not be loaded.')));
   }, []);
   return <>
     <AdventureHero/>
     <TripFinder/>
     <TripShowcase trips={trips} getId={itemId} getImage={packageImage} getTitle={packageTitle} getPlace={tripPlace}>{loading ? <Loading/> : error ? <Alert>{error}</Alert> : <EmptyState title="Your next story starts here" copy="We're getting new journeys ready. Check back soon." action={<Link className="button button-light" to="/explore">Explore trips</Link>}/>}</TripShowcase>
-    {destinationError ? <div className="content-shell"><Alert>{destinationError}</Alert></div> : <HomepageDestinationCards destinations={destinations}/>}
     <TravelIntentions getId={itemId} getImage={packageImage} getTitle={packageTitle} getPlace={tripPlace} getPrice={tripPrice} formatMoney={money}/>
     <FadeContent className="closing-cta content-shell" effect="focus" duration={0.8}><div className="closing-icon"><Compass/></div><div><div className="eyebrow">YOUR NEXT CHAPTER</div><h2>Ready to get lost<br/>in the right direction?</h2></div><Link to="/explore" className="button button-dark button-large">Let’s wander <ArrowRight size={17}/></Link></FadeContent>
   </>;
@@ -809,7 +803,35 @@ function Confirmation({ admin = false }) {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
-  useEffect(() => { endpoints.order(id).then(({ data }) => setOrder(data.order || data)).catch((e) => setError(errorMessage(e))); }, [id]);
+  const [emailRefreshError, setEmailRefreshError] = useState('');
+  useEffect(() => {
+    let active = true;
+    let timer;
+    let attempts = 0;
+    let loaded = false;
+    const refresh = async () => {
+      try {
+        const { data } = await endpoints.order(id);
+        if (!active) return;
+        const current = data.order || data;
+        loaded = true;
+        setOrder(current);
+        if (current.emailStatus === 'pending') {
+          if (++attempts < 60) timer = setTimeout(refresh, 5000);
+          else setEmailRefreshError('The email is still pending. Please contact the administrator if it does not arrive.');
+        }
+      } catch (failure) {
+        if (!active) return;
+        if (loaded) setEmailRefreshError('Could not refresh the email status. Reload this page to check again.');
+        else setError(errorMessage(failure));
+      }
+    };
+    setOrder(null);
+    setError('');
+    setEmailRefreshError('');
+    refresh();
+    return () => { active = false; clearTimeout(timer); };
+  }, [id]);
   const backPath = admin ? '/admin' : '/dashboard';
   const backLabel = admin ? 'Back to admin' : 'Back to my trips';
   if (error) return <main className="content-shell page-content"><Alert>{error}</Alert><Link className="text-link" to={backPath}><ArrowLeft size={15}/> {backLabel}</Link></main>;
@@ -832,6 +854,8 @@ function Confirmation({ admin = false }) {
         </div>
       </section>
       <aside className="booking-detail-summary"><div className="booking-summary-icon"><Ticket size={20}/></div><div className="eyebrow">BOOKING SUMMARY</div><h2>Your details.</h2><dl><div><dt>Reference</dt><dd>{reference}</dd></div><div><dt>Status</dt><dd><span className={`status-pill status-${(order.status || 'pending').toLowerCase()}`}>{order.status || 'Unavailable'}</span></dd></div>{order.contact?.email && <div><dt>Contact email</dt><dd>{order.contact.email}</dd></div>}<div className="booking-detail-total"><dt>Total</dt><dd>{money(order.totalMinor == null ? null : order.totalMinor / 100, order.currency || 'CAD')}</dd></div>{order.paymentMode === 'external' && <><div><dt>Recorded external payments</dt><dd>{money(order.amountPaidMinor / 100, order.currency)}</dd></div>{order.refundedMinor > 0 && <div><dt>Recorded external refunds</dt><dd>{money(order.refundedMinor / 100, order.currency)}</dd></div>}</>}</dl>
+        {order.emailStatus && <p><Mail size={16}/> {order.emailStatus === 'sent' ? 'Confirmation email accepted by the mail server.' : order.emailStatus === 'pending' ? 'Confirmation email is being processed.' : 'Confirmation email could not be sent. Please contact the administrator.'}</p>}
+        <Alert>{emailRefreshError}</Alert>
         <p><ShieldCheck size={16}/> No payment is collected through this website. External payment records are entered by an administrator.</p>
         <Link className="button button-dark button-full" to={backPath}>{admin ? 'Back to admin' : 'See my trips'} <ArrowRight size={16}/></Link>
       </aside>
@@ -1223,6 +1247,7 @@ function Admin({ night, onToggleTheme }) {
   const [uploadedImage, setUploadedImage] = useState('');
   const [saving, setSaving] = useState(false);
   const [reviewEmailBusy, setReviewEmailBusy] = useState('');
+  const [confirmationEmailBusy, setConfirmationEmailBusy] = useState('');
   const [listSearch, setListSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
@@ -1364,7 +1389,7 @@ function Admin({ night, onToggleTheme }) {
     try {
       const { data } = await endpoints.completeOrder(id);
       await load();
-      if (data.order.reviewEmailStatus === 'sent') notify('Booking completed and review email sent.');
+      if (data.order.reviewEmailStatus === 'sent') notify('Booking completed. Review email accepted by the mail server.');
       else if (data.order.reviewEmailStatus === 'not_needed') notify('Booking completed. This journey has already been reviewed.');
       else { notify('Booking completed.'); setError(`Review email was ${data.order.reviewEmailStatus === 'not_configured' ? 'not sent because SMTP is not configured' : 'not sent'}. You can retry it from this booking.`); }
     }
@@ -1377,11 +1402,23 @@ function Admin({ night, onToggleTheme }) {
     try {
       const { data } = await endpoints.retryReviewEmail(id);
       await load();
-      if (data.order.reviewEmailStatus === 'sent') notify('Review email sent.');
+      if (data.order.reviewEmailStatus === 'sent') notify('Review email accepted by the mail server.');
       else if (data.order.reviewEmailStatus === 'not_needed') notify('This journey has already been reviewed; no email was sent.');
       else setError(`Review email was ${data.order.reviewEmailStatus === 'not_configured' ? 'not sent because SMTP is not configured' : 'not sent'}.`);
     } catch (failure) { setError(errorMessage(failure)); }
     finally { setReviewEmailBusy(''); }
+  };
+  const retryConfirmationEmail = async (id) => {
+    if (confirmationEmailBusy) return;
+    setConfirmationEmailBusy(id);
+    setError('');
+    try {
+      const { data } = await endpoints.retryConfirmationEmail(id);
+      await load();
+      if (data.order.emailStatus === 'sent') notify('Confirmation email accepted by the mail server.');
+      else setError('Confirmation email could not be sent. Check the server mail configuration and retry.');
+    } catch (failure) { setError(errorMessage(failure)); }
+    finally { setConfirmationEmailBusy(''); }
   };
   const saveTraveller = (row, changes) => {
     setConfirmation({
@@ -1472,7 +1509,7 @@ function Admin({ night, onToggleTheme }) {
             const occupancy = row.capacity > 0 ? Math.min(100, Math.round((row.bookedSeats || 0) / row.capacity * 100)) : 0;
             return <Fragment key={id}>{(!previous || String(previous.startDate || '').slice(0, 10) !== day) && <tr className="admin-date-group"><td colSpan={7}><CalendarDays size={14}/> {adminDepartureDate(row.startDate)}</td></tr>}<tr><td data-label="Journey"><div className="admin-journey-cell"><img src={packageImage(row.package || {})} alt=""/><span><strong>{packageTitle(row.package || row)}</strong><small className="admin-cell-detail">{row.package?.country || row.package?.destination}</small></span></div></td><td data-label="Departure ID">{String(id).slice(-8).toUpperCase()}</td><td data-label="Status"><span className={`status-pill status-${row.status || 'scheduled'}`}>{row.status || 'scheduled'}</span></td><td data-label="Date">{adminDepartureDate(row.startDate)}</td><td data-label="Seats">{row.bookedSeats ?? '—'} / {row.capacity ?? '—'}</td><td data-label="Occupancy"><div className="admin-occupancy-cell"><div className="admin-occupancy" role="progressbar" aria-label="Departure occupancy" aria-valuemin={0} aria-valuemax={100} aria-valuenow={occupancy}><span style={{ width: `${occupancy}%` }}/></div><span>{occupancy}%</span></div></td><td data-label="Actions"><DepartureActions row={row} onChanged={() => { notify('Departure updated.'); load(); }} onError={setError}/></td></tr></Fragment>;
           }
-          if (tab === 'orders') return <tr key={id} className={selectedBookingId === String(id) ? 'admin-row-selected' : ''}><td data-label="Booking reference"><strong>{adminBookingReference(row)}</strong></td><td data-label="Journey">{row.packageSnapshot?.title || 'Journey'}</td><td data-label="Traveller">{adminPersonName(row, row.contact?.name) || adminPersonName(row.user, row.user?.name) || '—'}</td><td data-label="Status"><span className={`status-pill status-${(row.status || 'pending').toLowerCase()}`}>{row.status || 'Pending'}</span>{row.status === 'completed' && <small className="admin-cell-detail">{row.reviewEmailStatus === 'sent' ? 'Review email sent' : row.reviewEmailStatus === 'not_needed' ? 'Already reviewed' : <button className="admin-inline-link" disabled={Boolean(reviewEmailBusy)} onClick={() => retryReviewEmail(id)}>{reviewEmailBusy === id ? 'Sending…' : 'Retry review email'}</button>}</small>}</td><td data-label="Booking value">{money(row.totalMinor == null ? null : row.totalMinor / 100, row.currency || 'CAD')}</td><td data-label="Details"><button type="button" className="admin-icon-button" aria-label={`View ${adminBookingReference(row)}`} onClick={() => setSelectedBooking(String(id))}><Info size={17}/></button></td></tr>;
+          if (tab === 'orders') return <tr key={id} className={selectedBookingId === String(id) ? 'admin-row-selected' : ''}><td data-label="Booking reference"><strong>{adminBookingReference(row)}</strong></td><td data-label="Journey">{row.packageSnapshot?.title || 'Journey'}</td><td data-label="Traveller">{adminPersonName(row, row.contact?.name) || adminPersonName(row.user, row.user?.name) || '—'}</td><td data-label="Status"><span className={`status-pill status-${(row.status || 'pending').toLowerCase()}`}>{row.status || 'Pending'}</span>{row.status === 'confirmed' && row.emailStatus && <small className="admin-cell-detail">{row.emailStatus === 'sent' ? 'Confirmation accepted by mail server' : row.emailStatus === 'pending' && Date.now() - new Date(row.emailAttemptedAt || row.createdAt).getTime() < 300000 ? 'Confirmation sending' : <button className="admin-inline-link" disabled={Boolean(confirmationEmailBusy)} onClick={() => retryConfirmationEmail(id)}>{confirmationEmailBusy === id ? 'Sending…' : 'Retry confirmation email'}</button>}</small>}{row.status === 'completed' && <small className="admin-cell-detail">{row.reviewEmailStatus === 'sent' ? 'Review email accepted by mail server' : row.reviewEmailStatus === 'not_needed' ? 'Already reviewed' : <button className="admin-inline-link" disabled={Boolean(reviewEmailBusy)} onClick={() => retryReviewEmail(id)}>{reviewEmailBusy === id ? 'Sending…' : 'Retry review email'}</button>}</small>}</td><td data-label="Booking value">{money(row.totalMinor == null ? null : row.totalMinor / 100, row.currency || 'CAD')}</td><td data-label="Details"><button type="button" className="admin-icon-button" aria-label={`View ${adminBookingReference(row)}`} onClick={() => setSelectedBooking(String(id))}><Info size={17}/></button></td></tr>;
           if (tab === 'users') return <tr key={id} className={selectedUserId === String(id) ? 'admin-row-selected' : ''}><td data-label="Name"><div className="admin-person"><span className="admin-person-avatar">{(adminPersonName(row, row.name) || 'T').charAt(0).toUpperCase()}</span><button type="button" className="admin-name-button" onClick={() => setSelectedUser(String(id))}>{adminPersonName(row, row.name) || '—'}</button></div></td><td data-label="Email">{row.email || '—'}</td><td data-label="Role"><span className="admin-role-label">{row.role === 'admin' ? 'Administrator' : 'Traveller'}</span></td><td data-label="Joined">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td></tr>;
           return null;
         })}</tbody></table></div>}

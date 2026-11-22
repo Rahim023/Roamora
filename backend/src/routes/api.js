@@ -320,8 +320,14 @@ router.delete('/wishlist/:packageId', requireAuth, handle(async (request, respon
 router.post('/orders', requireAuth, handle(async (request, response) => {
   const input = validate(orderSchema, request.body);
   const result = await createBooking({ input, user: request.user });
-  if (!result.duplicate) await sendBookingConfirmation(result.order);
   response.status(result.duplicate ? 200 : 201).json({ order: result.order, duplicate: result.duplicate });
+  if (!result.duplicate) {
+    setImmediate(() => {
+      sendBookingConfirmation(result.order).catch((error) => {
+        console.error(`Could not finish booking email for order ${result.order._id}.`, { errorType: error.name, errorCode: error.code });
+      });
+    });
+  }
 }));
 
 router.get('/orders/mine', requireAuth, handle(async (request, response) => {
@@ -828,13 +834,17 @@ router.post('/admin/orders/:id/review-email/retry', handle(async (request, respo
 }));
 
 router.post('/admin/orders/:id/email/retry', handle(async (request, response) => {
-  const order = await Order.findById(request.params.id);
-  if (!order) throw new HttpError(404, 'Booking not found.');
-  if (!['pending', 'failed', 'not_sent_demo'].includes(order.emailStatus)) {
-    throw new HttpError(409, 'Only pending, failed, or unsent confirmations can be retried.');
-  }
-  order.emailStatus = 'pending';
-  await order.save();
+  const stale = new Date(Date.now() - 5 * 60 * 1000);
+  const order = await Order.findOneAndUpdate(
+    { _id: request.params.id, status: 'confirmed', $or: [
+      { emailStatus: { $in: ['failed', 'not_sent_demo'] } },
+      { emailStatus: 'pending', emailAttemptedAt: { $lt: stale } },
+      { emailStatus: 'pending', emailAttemptedAt: { $exists: false }, createdAt: { $lt: stale } },
+    ] },
+    { $set: { emailStatus: 'pending', emailAttemptedAt: new Date() } },
+    { new: true, runValidators: true },
+  );
+  if (!order) throw new HttpError(409, 'Confirmation email is not eligible for retry or is still being sent.');
   await sendBookingConfirmation(order);
   response.json({ order });
 }));

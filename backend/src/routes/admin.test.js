@@ -167,6 +167,28 @@ describe('admin management', () => {
     expect(claim.mock.calls[0][0]).toMatchObject({ _id: String(targetId), status: 'completed', $or: expect.any(Array) });
     expect((await request(app).post(url).set('Authorization', authorization())).status).toBe(409);
   });
+  it('atomically claims an unsent confirmation and rejects an unclaimable attempt', async () => {
+    authenticate();
+    vi.stubEnv('SMTP_HOST', '');
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const order = { _id: targetId, status: 'confirmed', updateOne: vi.fn().mockResolvedValue({}) };
+    const claim = vi.spyOn(Order, 'findOneAndUpdate').mockResolvedValueOnce(order).mockResolvedValueOnce(null);
+    const url = `/api/admin/orders/${targetId}/email/retry`;
+    const response = await request(app).post(url).set('Authorization', authorization());
+    expect(response.status).toBe(200);
+    expect(response.body.order.emailStatus).toBe('not_sent_demo');
+    expect(claim).toHaveBeenCalledWith(
+      { _id: String(targetId), status: 'confirmed', $or: [
+        { emailStatus: { $in: ['failed', 'not_sent_demo'] } },
+        { emailStatus: 'pending', emailAttemptedAt: { $lt: expect.any(Date) } },
+        { emailStatus: 'pending', emailAttemptedAt: { $exists: false }, createdAt: { $lt: expect.any(Date) } },
+      ] },
+      { $set: { emailStatus: 'pending', emailAttemptedAt: expect.any(Date) } },
+      { new: true, runValidators: true },
+    );
+    expect((await request(app).post(url).set('Authorization', authorization())).status).toBe(409);
+    log.mockRestore();
+  });
   it('validates uploads and returns the secure Cloudinary URL', async () => {
     authenticate();
     const url = '/api/admin/uploads/package-image';

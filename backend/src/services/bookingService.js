@@ -73,6 +73,7 @@ export async function createBooking({ input, user }) {
         startDate: departure.startDate,
         endDate: departure.endDate,
         emailStatus: 'pending',
+        emailAttemptedAt: new Date(),
         isDemo: trip.isDemo,
       });
       await order.save({ session });

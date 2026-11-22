@@ -62,6 +62,7 @@ export const endpoints = {
   adminUsers: () => api.get('/admin/users'),
   adminReviews: () => api.get('/admin/reviews'),
   completeOrder: (id) => api.patch(`/admin/orders/${id}/complete`),
+  retryConfirmationEmail: (id) => api.post(`/admin/orders/${id}/email/retry`),
   retryReviewEmail: (id) => api.post(`/admin/orders/${id}/review-email/retry`),
   promoteUser: (id) => api.patch(`/admin/users/${id}/promote`),
   updateAdminUser: (id, body) => api.patch(`/admin/users/${id}`, body),

@@ -66,6 +66,7 @@ const orderSchema = new mongoose.Schema(
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     emailStatus: { type: String, required: true, enum: ['not_sent_demo', 'pending', 'sent', 'failed'] },
+    emailAttemptedAt: Date,
     reviewEmailStatus: { type: String, enum: ['pending', 'sent', 'failed', 'not_configured', 'not_needed'] },
     reviewEmailAttemptedAt: Date,
     isDemo: { type: Boolean, default: false },

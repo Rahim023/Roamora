@@ -15,6 +15,12 @@
   opacity: 0;
 }
 
+@media (max-width: 700px) {
+  .app-shell[data-specular-webgl="true"] .adventure-cta::after {
+    opacity: .48;
+  }
+}
+
 :where(.app-shell [data-specular])::after {
   content: '';
   position: absolute;

@@ -92,6 +92,7 @@ export default function SpecularControls() {
 
       let difference = 0;
       root.querySelectorAll(selector).forEach((button) => {
+        if (button.classList.contains('adventure-cta') && window.matchMedia('(max-width: 700px)').matches) return;
         const rect = button.getBoundingClientRect();
         if (!rect.width || !rect.height || rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) return;
         const style = window.getComputedStyle(button);

@@ -106,7 +106,7 @@ export default function AdventureHero() {
 
   return (
     <section className="adventure-hero" ref={root} aria-labelledby="adventure-heading">
-      <div className="adventure-stage" ref={stage}>
+      <div className="adventure-stage" ref={stage} style={{ '--adventure-day-sky': `url("${assets.sky}")`, '--adventure-night-sky': `url("${nightAssets.sky}")` }}>
         <svg
           className="adventure-art"
           viewBox="0 0 1200 800"
@@ -139,6 +139,7 @@ export default function AdventureHero() {
           </g>
         </svg>
         <h1 id="adventure-heading" className="visually-hidden">Explore beyond your limits</h1>
+        <div className="adventure-mobile-title" aria-hidden="true">EXPLORE</div>
         <div className="adventure-actions" ref={actions}>
           <p>For the journeys that change everything</p>
           <a data-specular className="button adventure-cta" href="#trip-search">Explore trips <ArrowRight size={17} /></a>
