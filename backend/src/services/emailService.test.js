@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const sendMail = vi.hoisted(() => vi.fn());
-vi.mock('nodemailer', () => ({ default: { createTransport: () => ({ sendMail }) } }));
+const createTransport = vi.hoisted(() => vi.fn(() => ({ sendMail })));
+vi.mock('nodemailer', () => ({ default: { createTransport } }));
 
 import { sendBookingConfirmation, sendReviewRequestEmail } from './emailService.js';
 
@@ -11,6 +12,27 @@ afterEach(() => {
 });
 
 describe('booking confirmation email', () => {
+  it.each([
+    ['smtp.gmail.com', 'abcd efgh ijkl mnop', 'abcdefghijklmnop'],
+    ['SMTP.GMAIL.COM', 'abcd efgh ijkl mnop', 'abcdefghijklmnop'],
+    ['smtp.example.com', 'abcd efgh ijkl mnop', 'abcd efgh ijkl mnop'],
+    ['smtp.gmail.com', 'a different password', 'a different password'],
+  ])('handles SMTP credentials for %s without changing unrelated passwords', async (host, password, expected) => {
+    vi.stubEnv('SMTP_HOST', host);
+    vi.stubEnv('SMTP_USER', 'sender@example.com');
+    vi.stubEnv('SMTP_PASS', password);
+    sendMail.mockResolvedValue({ accepted: ['traveller@example.com'] });
+    const order = {
+      _id: 'booking-id', bookingReference: 'ROA-123', currency: 'USD', totalMinor: 12000,
+      packageSnapshot: { title: 'Mountain escape' }, startDate: new Date('2027-01-01T00:00:00Z'),
+      travellerCount: 1, status: 'confirmed', paymentMode: 'demo',
+      contact: { email: 'traveller@example.com' }, updateOne: vi.fn().mockResolvedValue({}),
+    };
+    await sendBookingConfirmation(order);
+    expect(order.emailStatus).toBe('sent');
+    expect(createTransport).toHaveBeenCalledWith(expect.objectContaining({ auth: { user: 'sender@example.com', pass: expected } }));
+  });
+
   it.each([
     ['demo', true],
     ['external', false],

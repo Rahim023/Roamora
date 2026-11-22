@@ -2,11 +2,16 @@ import nodemailer from 'nodemailer';
 
 function getTransport() {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+  const password = process.env.SMTP_PASS;
+  const compactPassword = password.replace(/\s/g, '');
+  const smtpPassword = process.env.SMTP_HOST.toLowerCase() === 'smtp.gmail.com' && /^[a-z]{16}$/i.test(compactPassword)
+    ? compactPassword
+    : password;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    auth: { user: process.env.SMTP_USER, pass: smtpPassword },
     disableFileAccess: true,
     disableUrlAccess: true,
   });
