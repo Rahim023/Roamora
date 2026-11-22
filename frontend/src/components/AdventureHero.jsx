@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowRight } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -26,10 +26,10 @@ const nightAssets = {
   cloud3: 'https://res.cloudinary.com/divypkla0/image/upload/v1794644328/nightcloud1_qnaw1b.png',
 };
 
-function HeroLayer({ layer, name, preserveAspectRatio }) {
+function HeroLayer({ layer, name, preserveAspectRatio, height = 800 }) {
   return <g className={name}>
-    <image className="adventure-asset-day" href={assets[layer]} width="1200" height="800" preserveAspectRatio={preserveAspectRatio}/>
-    <image className="adventure-asset-night" href={nightAssets[layer]} width="1200" height="800" preserveAspectRatio={preserveAspectRatio}/>
+    <image className="adventure-asset-day" href={assets[layer]} width="1200" height={height} preserveAspectRatio={preserveAspectRatio}/>
+    <image className="adventure-asset-night" href={nightAssets[layer]} width="1200" height={height} preserveAspectRatio={preserveAspectRatio}/>
   </g>;
 }
 
@@ -38,7 +38,27 @@ export default function AdventureHero() {
   const stage = useRef(null);
   const title = useRef(null);
   const actions = useRef(null);
+  const [mobileHeight, setMobileHeight] = useState(null);
   const maskId = `adventure-mask-${useId().replace(/:/g, '')}`;
+  // Extend the viewBox on portrait screens so the full landscape and the scroll reveal both fit.
+  const viewHeight = mobileHeight || 800;
+  const landscapeOffset = mobileHeight ? mobileHeight - 800 : 0;
+  const motionScale = mobileHeight ? mobileHeight / 800 : 1;
+  const titleY = mobileHeight ? mobileHeight * 0.28 : 235;
+
+  useLayoutEffect(() => {
+    const updateViewport = () => {
+      const { width, height } = stage.current.getBoundingClientRect();
+      const next = window.matchMedia('(max-width: 700px)').matches && width
+        ? Math.max(800, Math.round(1200 * height / width))
+        : null;
+      setMobileHeight((previous) => previous === next ? previous : next);
+    };
+    const observer = new ResizeObserver(updateViewport);
+    observer.observe(stage.current);
+    updateViewport();
+    return () => observer.disconnect();
+  }, []);
 
   useLayoutEffect(() => {
     let active = true;
@@ -47,7 +67,7 @@ export default function AdventureHero() {
       const svg = text?.ownerSVGElement;
       const header = document.querySelector('.site-header-home');
       if (!text || !svg || !header) return;
-      text.setAttribute('y', '235');
+      text.setAttribute('y', String(titleY));
       text.style.removeProperty('font-size');
       const stageTop = stage.current.getBoundingClientRect().top;
       const safeTop = stageTop + header.offsetHeight + 24;
@@ -58,7 +78,7 @@ export default function AdventureHero() {
         rect = text.getBoundingClientRect();
       }
       const scale = svg.getScreenCTM()?.d;
-      if (scale && rect.top < safeTop) text.setAttribute('y', String(235 + (safeTop - rect.top) / scale));
+      if (scale && rect.top < safeTop) text.setAttribute('y', String(titleY + (safeTop - rect.top) / scale));
     };
     const observer = new ResizeObserver(positionTitle);
     observer.observe(stage.current);
@@ -67,7 +87,7 @@ export default function AdventureHero() {
     positionTitle();
     document.fonts.ready.then(() => { if (active) positionTitle(); });
     return () => { active = false; observer.disconnect(); };
-  }, []);
+  }, [titleY]);
 
   useLayoutEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -85,13 +105,13 @@ export default function AdventureHero() {
             invalidateOnRefresh: true,
           },
         })
-          .fromTo('.adventure-sky', { y: 0 }, { y: -200, ease: 'none' }, 0)
-          .fromTo('.adventure-cloud1', { y: 100 }, { y: -800, ease: 'none' }, 0)
-          .fromTo('.adventure-cloud2', { y: -150 }, { y: -500, ease: 'none' }, 0)
-          .fromTo('.adventure-cloud3', { y: -50 }, { y: -650, ease: 'none' }, 0)
-          .fromTo('.adventure-mount-bg', { y: -10 }, { y: -100, ease: 'none' }, 0)
-          .fromTo('.adventure-mount-mid', { y: -30 }, { y: -250, ease: 'none' }, 0)
-          .fromTo('.adventure-mount-fg', { y: -50 }, { y: -600, ease: 'none' }, 0);
+          .fromTo('.adventure-sky', { y: 0 }, { y: -200 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-cloud1', { y: 100 * motionScale }, { y: -800 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-cloud2', { y: -150 * motionScale }, { y: -500 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-cloud3', { y: -50 * motionScale }, { y: -650 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-mount-bg', { y: -10 * motionScale }, { y: -100 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-mount-mid', { y: -30 * motionScale }, { y: -250 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-mount-fg', { y: -50 * motionScale }, { y: -600 * motionScale, ease: 'none' }, 0);
       }, root);
       ScrollTrigger.refresh();
     };
@@ -102,44 +122,47 @@ export default function AdventureHero() {
       preference.removeEventListener('change', configure);
       context?.revert();
     };
-  }, []);
+  }, [motionScale]);
 
   return (
     <section className="adventure-hero" ref={root} aria-labelledby="adventure-heading">
-      <div className="adventure-stage" ref={stage} style={{ '--adventure-day-sky': `url("${assets.sky}")`, '--adventure-night-sky': `url("${nightAssets.sky}")` }}>
+      <div className="adventure-stage" ref={stage}>
         <svg
           className="adventure-art"
-          viewBox="0 0 1200 800"
+          viewBox={`0 0 1200 ${viewHeight}`}
           preserveAspectRatio="xMidYMid slice"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
           <defs>
             <mask id={maskId}>
-              <g className="adventure-cloud1">
-                <rect fill="#fff" width="100%" height="801" y="799" />
-                <image href={assets.cloudMask} width="1200" height="800" />
+              <g transform={`translate(0 ${landscapeOffset})`}>
+                <g className="adventure-cloud1">
+                  <rect fill="#fff" width="100%" height={viewHeight + 1} y="799" />
+                  <image href={assets.cloudMask} width="1200" height="800" />
+                </g>
               </g>
             </mask>
           </defs>
-          <HeroLayer name="adventure-sky" layer="sky" preserveAspectRatio="xMidYMid slice"/>
-          <HeroLayer name="adventure-mount-bg" layer="background"/>
-          <HeroLayer name="adventure-mount-mid" layer="middle"/>
-          <HeroLayer name="adventure-cloud2" layer="cloud2"/>
-          <HeroLayer name="adventure-mount-fg" layer="foreground"/>
-          <HeroLayer name="adventure-cloud1" layer="cloud1"/>
-          <HeroLayer name="adventure-cloud3" layer="cloud3"/>
-          <text ref={title} className="adventure-title" x="600" y="235" textAnchor="middle" fill="#fff">EXPLORE</text>
+          <HeroLayer name="adventure-sky" layer="sky" height={mobileHeight ? viewHeight + 200 * motionScale : 800} preserveAspectRatio="xMidYMid slice"/>
+          <g transform={`translate(0 ${landscapeOffset})`}>
+            <HeroLayer name="adventure-mount-bg" layer="background"/>
+            <HeroLayer name="adventure-mount-mid" layer="middle"/>
+            <HeroLayer name="adventure-cloud2" layer="cloud2"/>
+            <HeroLayer name="adventure-mount-fg" layer="foreground"/>
+            <HeroLayer name="adventure-cloud1" layer="cloud1"/>
+            <HeroLayer name="adventure-cloud3" layer="cloud3"/>
+          </g>
+          <text ref={title} className="adventure-title" x="600" y={titleY} textAnchor="middle" fill="#fff">EXPLORE</text>
           <g mask={`url(#${maskId})`}>
             <rect className="adventure-reveal-surface" fill="#fff" width="100%" height="100%" />
-            <text className="adventure-reveal" x="600" y="218" textAnchor="middle" fill="#0b1628">
+            <text className="adventure-reveal" x="600" y={mobileHeight ? mobileHeight * 0.25 : 218} textAnchor="middle" fill="#0b1628">
               <tspan x="600">BEYOND YOUR</tspan>
-              <tspan x="600" dy="78">LIMITS</tspan>
+              <tspan x="600" dy={mobileHeight ? 115 : 78}>LIMITS</tspan>
             </text>
           </g>
         </svg>
         <h1 id="adventure-heading" className="visually-hidden">Explore beyond your limits</h1>
-        <div className="adventure-mobile-title" aria-hidden="true">EXPLORE</div>
         <div className="adventure-actions" ref={actions}>
           <p>For the journeys that change everything</p>
           <a data-specular className="button adventure-cta" href="#trip-search">Explore trips <ArrowRight size={17} /></a>

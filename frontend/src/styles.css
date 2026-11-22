@@ -61,7 +61,6 @@ img { display: block; max-width: 100%; }
 .adventure-hero { position: relative; height: 200vh; height: 200svh; background: #0b1628; }
 .adventure-stage { position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 420px; overflow: hidden; background: #0b1628; }
 .adventure-art { position: absolute; inset: 0; width: 100%; height: 100%; }
-.adventure-mobile-title { display: none; }
 .adventure-title, .adventure-reveal { font-family: 'Unbounded', sans-serif; font-weight: 800; letter-spacing: -3px; }
 .adventure-title { font-size: clamp(48px, 10vw, 105px); }
 .adventure-reveal { font-size: clamp(32px, 8vw, 62px); }
@@ -73,7 +72,6 @@ img { display: block; max-width: 100%; }
 .adventure-scroll:hover { color: #087f8c; }
 .adventure-scroll svg { transition: transform .2s ease; }
 .adventure-scroll:hover svg { transform: translateY(5px); }
-.adventure-asset-day, .adventure-asset-night { width: 100%; height: 100%; object-fit: contain; object-position: center; }
 .stop-focus { display: inline-flex; align-items: center; gap: 5px; margin: 4px 12px 0 0; padding: 3px 0; border: 0; background: transparent; color: #087f8c; font-weight: 600; }
 .hero-scene { height: min(670px, calc(100vh - 78px)); min-height: 540px; position: relative; overflow: hidden; color: white; background: #789c9a; isolation: isolate; }
 .hero-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #a9c7c7 0%, #cad3c6 44%, #e8c99e 83%, #e5b68f 100%); z-index: -5; }
@@ -450,12 +448,8 @@ img { display: block; max-width: 100%; }
   .main-nav { display: none; position: absolute; top: 65px; left: 0; right: 0; padding: 17px 22px; background: #f7f8f4; border-bottom: 1px solid var(--line); flex-direction: column; align-items: flex-start; gap: 18px; }
   .main-nav.is-open { display: flex; }
   .site-header-home .main-nav { background: #0b1628; border-color: rgba(255,255,255,.15); }
-  .adventure-stage { background: #0b1628 var(--adventure-day-sky) center / cover no-repeat; }
-  html[data-theme="night"] .adventure-stage { background-image: var(--adventure-night-sky); }
-  .adventure-art { inset: auto 0 0; height: auto; aspect-ratio: 3 / 2; }
-  .adventure-sky { display: none; }
-  .adventure-title, .adventure-reveal { display: none; }
-  .adventure-mobile-title { display: block; position: absolute; top: max(110px, 22%); left: 0; width: 100%; color: #fff; text-align: center; font: 800 clamp(38px, 12vw, 72px)/1 'Unbounded', sans-serif; letter-spacing: -1px; }
+  .adventure-title { font-size: 180px; letter-spacing: -3px; }
+  .adventure-reveal { font-size: 96px; letter-spacing: -2px; }
   .adventure-actions { top: 52%; }
   .adventure-scroll { bottom: 24px; }
   .header-actions { gap: 4px; }
