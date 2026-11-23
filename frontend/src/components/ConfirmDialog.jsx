@@ -4,7 +4,7 @@ import { ShieldCheck, X } from 'lucide-react';
 import { popupOverlayMotion, popupPanelMotion } from './popupMotion.js';
 import './PasswordResetModal.css';
 
-export default function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose, hideCancel = false, className = '' }) {
+export default function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose, hideCancel = false, className = '', secondaryAction }) {
   const dialog = useRef(null);
   const confirmed = useRef(false);
   const id = useId();
@@ -50,6 +50,7 @@ export default function ConfirmDialog({ title, description, confirmLabel, onConf
       <p id={`${id}-description`} className="reset-description">{description}</p>
       <div className="confirm-dialog-actions">
         {!hideCancel && <button type="button" className="button button-outline confirm-dialog-cancel" onClick={onClose}>Cancel</button>}
+        {secondaryAction && <button type="button" className="button button-outline" onClick={secondaryAction.onClick}>{secondaryAction.label}</button>}
         <button type="button" className="button button-dark confirm-dialog-confirm" onClick={confirm}>{confirmLabel}</button>
       </div>
     </motion.div>

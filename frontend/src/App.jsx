@@ -1677,13 +1677,15 @@ function AdminLayout({ children, night, onToggleTheme }) {
 
 export default function App() {
   const { pathname, hash } = useLocation();
+  const navigate = useNavigate();
   const { user, loginRevision } = useAuth();
   const [night, setNight] = useState(false);
   const [cancelBooking, setCancelBooking] = useState(null);
   const [cancellationRevision, setCancellationRevision] = useState(0);
-  const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem('roamora_welcome_seen') !== '1');
-  const dismissWelcome = () => { localStorage.setItem('roamora_welcome_seen', '1'); setShowWelcome(false); };
+  const [showWelcome, setShowWelcome] = useState(() => pathname === '/' || sessionStorage.getItem('roamora_opened') !== '1');
+  const dismissWelcome = () => setShowWelcome(false);
   const previousPath = useRef(pathname);
+  useEffect(() => { sessionStorage.setItem('roamora_opened', '1'); }, []);
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = night ? 'night' : 'day';
     return () => { delete document.documentElement.dataset.theme; };
@@ -1717,6 +1719,7 @@ Password: Admin$1111
 
 Payments are not collected on this website.`}
     confirmLabel="Explore Roamora"
+    secondaryAction={{ label: 'Login as admin', onClick: () => { dismissWelcome(); navigate('/login'); } }}
     hideCancel
     onConfirm={dismissWelcome}
     onClose={dismissWelcome}
