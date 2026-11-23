@@ -98,15 +98,18 @@ router.post('/auth/password-reset/request', handle(async (request, response) => 
     email, isActive: { $ne: false }, authProvider: { $ne: 'google' }, passwordHash: { $type: 'string' },
     $or: [{ 'passwordReset.requestedAt': { $exists: false } }, { 'passwordReset.requestedAt': { $lte: new Date(now.getTime() - 60000) } }],
   }, { $set: { passwordReset: { codeHash, requestedAt: now, expiresAt: new Date(now.getTime() + 600000), attempts: 0 } } }, { new: true });
-  if (user) {
-    try {
-      await sendPasswordResetCode(transport, email, code);
-    } catch (error) {
-      console.error('Password reset email delivery failed.', { errorType: error.name, errorCode: error.code });
-      await User.updateOne({ _id: user._id, 'passwordReset.codeHash': codeHash }, { $unset: { passwordReset: 1 } });
-    }
-  }
   response.status(202).json({ message: 'If an eligible account exists, a code will be emailed if delivery succeeds. Check your inbox and spam folder.' });
+  if (user) {
+    setImmediate(() => {
+      sendPasswordResetCode(transport, email, code).catch((error) => {
+        console.error('Password reset email delivery failed.', { errorType: error.name, errorCode: error.code });
+        return User.updateOne({ _id: user._id, 'passwordReset.codeHash': codeHash, 'passwordReset.requestedAt': now }, { $unset: { passwordReset: 1 } })
+          .catch((cleanupError) => {
+            console.error('Password reset cleanup failed.', { errorType: cleanupError.name, errorCode: cleanupError.code });
+          });
+      });
+    });
+  }
 }));
 
 router.post('/auth/password-reset/verify', handle(async (request, response) => {

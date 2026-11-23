@@ -79,9 +79,23 @@ describe('password recovery', () => {
   const complete = (token, password = 'newpass1!') => request(app).post('/api/auth/password-reset/complete').send({ email, token, password });
   const mailedCode = () => sendMail.mock.calls[0][0].text.match(/\b\d{6}\b/)[0];
 
+  it('responds without waiting for SMTP delivery', async () => {
+    let finish;
+    sendMail.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    try {
+      const response = await requestCode().timeout({ response: 3000 });
+      expect(response.status).toBe(202);
+      await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(1));
+      expect(user.passwordReset.codeHash).toBe(digest('code', mailedCode()));
+    } finally {
+      if (finish) finish({ accepted: [email] });
+    }
+  });
+
   it('uses the same response for eligible, missing, throttled and Google-only accounts', async () => {
     const first = await requestCode(' TRAVELER@example.com ');
     expect(first.status).toBe(202);
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(1));
     const code = mailedCode();
     expect(user.passwordReset.codeHash).toBe(digest('code', code));
     expect(JSON.stringify(user.passwordReset)).not.toContain(code);
@@ -97,14 +111,17 @@ describe('password recovery', () => {
     sendMail.mockRejectedValue(new Error('delivery failure'));
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect((await requestCode()).status).toBe(202);
-    expect(user.passwordReset).toBeUndefined();
-    expect(log).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(user.passwordReset).toBeUndefined();
+      expect(log).toHaveBeenCalled();
+    });
     vi.stubEnv('SMTP_HOST', '');
     expect((await requestCode()).status).toBe(503);
   });
 
   it('enforces expiry and five attempts', async () => {
     await requestCode();
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(1));
     const code = mailedCode();
     user.passwordReset.expiresAt = new Date(Date.now() - 1);
     expect((await verify(code)).status).toBe(400);
@@ -118,6 +135,7 @@ describe('password recovery', () => {
   it('consumes codes and authorizations once, applies password rules, and revokes older tokens', async () => {
     const oldToken = jwt.sign({ sub: user._id, role: 'user' }, secret);
     await requestCode();
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(1));
     const code = mailedCode();
     const attempts = await Promise.all([verify(code), verify(code)]);
     expect(attempts.map((result) => result.status).sort()).toEqual([200, 400]);
@@ -137,6 +155,7 @@ describe('password recovery', () => {
 
   it('rejects expired reset authorizations without changing the password', async () => {
     await requestCode();
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(1));
     const response = await verify(mailedCode());
     user.passwordReset.expiresAt = new Date(Date.now() - 1);
     expect((await complete(response.body.token)).status).toBe(400);
@@ -145,11 +164,30 @@ describe('password recovery', () => {
 
   it('invalidates an earlier reset authorization when a new code is requested', async () => {
     await requestCode();
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(1));
     const response = await verify(mailedCode());
     user.passwordReset.requestedAt = new Date(Date.now() - 61000);
     expect((await requestCode()).status).toBe(202);
-    expect(sendMail).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(2));
     expect((await complete(response.body.token)).status).toBe(400);
     expect(user.passwordHash).toBe('old-hash');
+  });
+
+  it('does not clear a newer reset when an earlier email fails', async () => {
+    let failFirst;
+    sendMail.mockImplementationOnce(() => new Promise((_resolve, reject) => { failFirst = reject; }))
+      .mockResolvedValueOnce({ accepted: [email] });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await requestCode();
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(1));
+    const firstHash = user.passwordReset.codeHash;
+    user.passwordReset.requestedAt = new Date(Date.now() - 61000);
+    await requestCode();
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalledTimes(2));
+    user.passwordReset.codeHash = firstHash;
+    failFirst(new Error('delivery failure'));
+    await vi.waitFor(() => expect(log).toHaveBeenCalled());
+    await vi.waitFor(() => expect(User.updateOne).toHaveBeenCalled());
+    expect(user.passwordReset.codeHash).toBe(firstHash);
   });
 });
