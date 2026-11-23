@@ -1707,6 +1707,7 @@ export default function App() {
   return <>{pathname === '/admin' || pathname.startsWith('/admin/') ? routes : <ClickSpark className="app-shell" targetSelector="[data-click-spark], .site-header a, .site-header button" sparkColor={night ? ['#83b5aa', '#d6e8e1', '#ffffff'] : ['#47766c', '#d2a36f', '#ffffff']} sparkSize={12} sparkRadius={28} duration={500} glow={0.35} ring><SpecularControls/><Header night={night} onToggleTheme={() => setNight((value) => !value)}/>{pathname === '/' ? routes : <FadeContent key={pathname} className="route-content" effect="focus" duration={0.6} trigger="mount">{routes}</FadeContent>}<Footer/>{cancelBooking && <CancelBookingModal booking={cancelBooking} onClose={() => setCancelBooking(null)} onRefresh={() => setCancellationRevision((value) => value + 1)}/>}{pathname !== '/travo' && <TravoBubble/>}</ClickSpark>}{!showWelcome && <ReviewReminder user={user} loginRevision={loginRevision} pathname={pathname}/>} 
   {showWelcome && (
   <ConfirmDialog
+    className="welcome-dialog"
     title="Welcome to Roamora."
     description={`Explore the project and its journeys.
 

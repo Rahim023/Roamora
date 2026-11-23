@@ -4,7 +4,7 @@ import { ShieldCheck, X } from 'lucide-react';
 import { popupOverlayMotion, popupPanelMotion } from './popupMotion.js';
 import './PasswordResetModal.css';
 
-export default function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose, hideCancel = false }) {
+export default function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose, hideCancel = false, className = '' }) {
   const dialog = useRef(null);
   const confirmed = useRef(false);
   const id = useId();
@@ -42,7 +42,7 @@ export default function ConfirmDialog({ title, description, confirmLabel, onConf
   };
 
   return <motion.div className="reset-overlay" onKeyDown={keyDown} {...popupOverlayMotion(reduceMotion)}>
-    <motion.div ref={dialog} className="reset-dialog confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} {...popupPanelMotion(reduceMotion)}>
+    <motion.div ref={dialog} className={`reset-dialog confirm-dialog ${className}`} role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} {...popupPanelMotion(reduceMotion)}>
       <button type="button" className="reset-close" onClick={onClose} aria-label="Close confirmation"><X size={20}/></button>
       <div className="reset-icon" aria-hidden="true"><ShieldCheck size={23}/></div>
       <div className="reset-kicker">ROAMORA · PLEASE CONFIRM</div>
