@@ -26,8 +26,9 @@ const nightAssets = {
   cloud3: 'https://res.cloudinary.com/divypkla0/image/upload/v1794644328/nightcloud1_qnaw1b.png',
 };
 
-function HeroLayer({ layer, name, preserveAspectRatio, height = 800 }) {
+function HeroLayer({ layer, name, preserveAspectRatio, height = 800, children }) {
   return <g className={name}>
+    {children}
     <image className="adventure-asset-day" href={assets[layer]} width="1200" height={height} preserveAspectRatio={preserveAspectRatio}/>
     <image className="adventure-asset-night" href={nightAssets[layer]} width="1200" height={height} preserveAspectRatio={preserveAspectRatio}/>
   </g>;
@@ -40,6 +41,8 @@ export default function AdventureHero() {
   const actions = useRef(null);
   const [mobileHeight, setMobileHeight] = useState(null);
   const maskId = `adventure-mask-${useId().replace(/:/g, '')}`;
+  const dayCloudFillId = `${maskId}-day-fill`;
+  const nightCloudFillId = `${maskId}-night-fill`;
   // Extend the viewBox on portrait screens so the full landscape and the scroll reveal both fit.
   const viewHeight = mobileHeight || 800;
   const landscapeOffset = mobileHeight ? mobileHeight - 800 : 0;
@@ -106,7 +109,8 @@ export default function AdventureHero() {
           },
         })
           .fromTo('.adventure-sky', { y: 0 }, { y: -200 * motionScale, ease: 'none' }, 0)
-          .fromTo('.adventure-cloud1', { y: 100 * motionScale }, { y: -800 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-cloud-mask', { y: 100 * motionScale }, { y: -800 * motionScale, ease: 'none' }, 0)
+          .fromTo('.adventure-cloud1', { y: mobileHeight ? 0 : 100 }, { y: -800 * motionScale, ease: 'none' }, 0)
           .fromTo('.adventure-cloud2', { y: -150 * motionScale }, { y: -500 * motionScale, ease: 'none' }, 0)
           .fromTo('.adventure-cloud3', { y: -50 * motionScale }, { y: -650 * motionScale, ease: 'none' }, 0)
           .fromTo('.adventure-mount-bg', { y: -10 * motionScale }, { y: -100 * motionScale, ease: 'none' }, 0)
@@ -122,7 +126,7 @@ export default function AdventureHero() {
       preference.removeEventListener('change', configure);
       context?.revert();
     };
-  }, [motionScale]);
+  }, [mobileHeight, motionScale]);
 
   return (
     <section className="adventure-hero" ref={root} aria-labelledby="adventure-heading">
@@ -135,9 +139,17 @@ export default function AdventureHero() {
           aria-hidden="true"
         >
           <defs>
+            <linearGradient id={dayCloudFillId} gradientUnits="userSpaceOnUse" x1="0" y1="500" x2="0" y2="650">
+              <stop offset="0" stopColor="#fdfdfd" stopOpacity="0" />
+              <stop offset="1" stopColor="#fdfdfd" />
+            </linearGradient>
+            <linearGradient id={nightCloudFillId} gradientUnits="userSpaceOnUse" x1="0" y1="500" x2="0" y2="650">
+              <stop offset="0" stopColor="#1c2c3b" stopOpacity="0" />
+              <stop offset="1" stopColor="#1c2c3b" />
+            </linearGradient>
             <mask id={maskId}>
               <g transform={`translate(0 ${landscapeOffset})`}>
-                <g className="adventure-cloud1">
+                <g className="adventure-cloud-mask">
                   <rect fill="#fff" width="100%" height={viewHeight + 1} y="799" />
                   <image href={assets.cloudMask} width="1200" height="800" />
                 </g>
@@ -150,7 +162,12 @@ export default function AdventureHero() {
             <HeroLayer name="adventure-mount-mid" layer="middle"/>
             <HeroLayer name="adventure-cloud2" layer="cloud2"/>
             <HeroLayer name="adventure-mount-fg" layer="foreground"/>
-            <HeroLayer name="adventure-cloud1" layer="cloud1"/>
+            <HeroLayer name="adventure-cloud1" layer="cloud1">
+              {mobileHeight && <>
+                <rect className="adventure-asset-day" y="500" width="1200" height={viewHeight + 300} fill={`url(#${dayCloudFillId})`}/>
+                <rect className="adventure-asset-night" y="500" width="1200" height={viewHeight + 300} fill={`url(#${nightCloudFillId})`}/>
+              </>}
+            </HeroLayer>
             <HeroLayer name="adventure-cloud3" layer="cloud3"/>
           </g>
           <text ref={title} className="adventure-title" x="600" y={titleY} textAnchor="middle" fill="#fff">EXPLORE</text>

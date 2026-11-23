@@ -151,9 +151,8 @@ function Footer() {
 
 function Protected({ admin = false, children }) {
   const { user, ready } = useAuth();
-  const location = useLocation();
   if (!ready) return <div className="center-state"><LoaderCircle className="spin"/> Getting things ready…</div>;
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  if (!user) return <Navigate to="/login" replace />;
   if (admin && user.role !== 'admin') return <Navigate to="/dashboard" replace />;
   return children;
 }
@@ -520,7 +519,6 @@ const registerCredentialsSchema = loginCredentialsSchema.extend({
 function AuthPage({ mode }) {
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [values, setValues] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -539,16 +537,13 @@ function AuthPage({ mode }) {
     }, pageRef);
     return () => context.revert();
   }, [mode]);
-  const finishSignIn = (user) => {
-    const destination = location.state?.from;
-    navigate(typeof destination === 'string' && destination.startsWith('/') && !destination.startsWith('//') ? destination : user.role === 'admin' ? '/admin' : '/', { replace: true });
-  };
+  const finishSignIn = () => navigate('/', { replace: true });
   const submit = async (e) => {
     e.preventDefault(); setError('');
     const result = (register ? registerCredentialsSchema : loginCredentialsSchema).safeParse(values);
     if (!result.success) { setError(result.error.issues[0].message); return; }
     setLoading(true);
-    try { finishSignIn(await signIn(register ? 'register' : 'login', result.data)); }
+    try { await signIn(register ? 'register' : 'login', result.data); finishSignIn(); }
     catch (e2) { setError(errorMessage(e2, 'We couldn’t sign you in. Please check your details.')); }
     finally { setLoading(false); }
   };
@@ -557,7 +552,7 @@ function AuthPage({ mode }) {
     if (!credential) { setError('Google did not provide a credential. Please try again.'); return; }
     setError('');
     setLoading(true);
-    try { finishSignIn(await signIn('google', { credential })); }
+    try { await signIn('google', { credential }); finishSignIn(); }
     catch (e) { setError(errorMessage(e, 'Google sign-in failed. Please try again.')); }
     finally { setLoading(false); }
   };
@@ -574,7 +569,7 @@ function AuthPage({ mode }) {
       <div className="auth-google auth-animate" aria-busy={loading}>
         <GoogleLogin onSuccess={googleSignIn} onError={() => setError('Google sign-in failed. Please try again.')} text={register ? 'signup_with' : 'signin_with'} shape="rectangular" width="240" />
       </div>
-      <div className="auth-switch auth-animate">{register ? 'Already part of the journey?' : 'New around here?'} <Link to={register ? '/login' : '/register'} state={location.state}>{register ? 'Log in' : 'Join Roamora'} <ArrowRight size={13}/></Link></div>
+      <div className="auth-switch auth-animate">{register ? 'Already part of the journey?' : 'New around here?'} <Link to={register ? '/login' : '/register'}>{register ? 'Log in' : 'Join Roamora'} <ArrowRight size={13}/></Link></div>
     </div></div>{showReset && <PasswordResetModal initialEmail={values.email} onClose={() => setShowReset(false)}/>}</main>;
 }
 
